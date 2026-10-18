@@ -12,6 +12,9 @@ from vllm_metal.pytorch_backend.mps_ops import _load_mps_module
 from vllm_metal.pytorch_backend.runner import MPSModelRunner
 from vllm_metal.v1.worker import MetalWorker, init_worker_distributed_environment
 
+# PyTorch's MPS allocator rounds large heaps up to this size (kRoundLarge).
+_MPS_HEAP_ALIGNMENT = 2 << 20
+
 
 def _patch_mps_mrv2_validation():
     from vllm.config import VllmConfig
@@ -143,9 +146,10 @@ class MPSWorker(MetalWorker):
             raise ValueError(
                 "MPS model and activation allowance exceed the memory budget"
             )
-        # Upstream backs all KV layers with one MPS buffer. PyTorch rounds large
-        # heaps up to 2 MiB, and the heap must fit in maxBufferLength.
-        max_buffer = _load_mps_module().max_buffer_length() // (2 << 20) * (2 << 20)
+        # Upstream backs all KV layers with one MPS buffer. PyTorch requires
+        # size < maxBufferLength, after rounding up to the heap alignment.
+        limit = _load_mps_module().max_buffer_length()
+        max_buffer = (limit - 1) // _MPS_HEAP_ALIGNMENT * _MPS_HEAP_ALIGNMENT
         return min(available, max_buffer)
 
     def synchronize_device(self):

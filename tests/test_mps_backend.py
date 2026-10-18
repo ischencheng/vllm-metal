@@ -131,7 +131,18 @@ def test_cache_budget_handles_model_dimensions(mps_memory, config_name, fields, 
     assert MPSWorker.determine_available_memory(worker) == 1234
 
 
-def test_cache_budget_fits_one_metal_buffer(mps_memory):
+@pytest.mark.parametrize(
+    ("limit", "largest"),
+    [
+        # PyTorch rounds the backing heap up to 2 MiB, so an unaligned limit
+        # still leaves only 1 GiB usable.
+        ((1 << 30) + (1 << 20), 1 << 30),
+        # PyTorch rejects size == maxBufferLength.
+        (1 << 30, (1 << 30) - (2 << 20)),
+    ],
+    ids=["unaligned", "aligned"],
+)
+def test_cache_budget_fits_one_metal_buffer(mps_memory, limit, largest):
     """Upstream puts all KV layers in one buffer, so the budget must fit in it."""
     import transformers
 
@@ -145,10 +156,8 @@ def test_cache_budget_fits_one_metal_buffer(mps_memory):
         model_config=SimpleNamespace(hf_text_config=hf, get_hidden_size=lambda: 64),
         scheduler_config=SimpleNamespace(max_num_batched_tokens=8),
     )
-    # PyTorch rounds the backing heap up to 2 MiB, so an unaligned limit
-    # still leaves only 1 GiB usable.
-    mps_memory((1 << 30) + (1 << 20))
-    assert MPSWorker.determine_available_memory(worker) <= 1 << 30
+    mps_memory(limit)
+    assert MPSWorker.determine_available_memory(worker) == largest
 
 
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16], ids=["fp16", "bf16"])
