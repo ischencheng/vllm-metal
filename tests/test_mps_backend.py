@@ -78,20 +78,35 @@ def test_request_slots_and_removed_request_writeback(state, num_groups):
 
 @pytest.fixture
 def mps_memory(monkeypatch):
-    """Fake a 4 GiB GPU working set with 128 MiB already allocated."""
-    from vllm_metal.pytorch_backend import worker
+    """Fake a 4 GiB GPU working set with 128 MiB already allocated.
+
+    Yields the native override that sets maxBufferLength for the test.
+    """
+    from vllm_metal.pytorch_backend.mps_ops import _load_mps_module
 
     monkeypatch.setattr(torch.mps, "synchronize", lambda: None)
     monkeypatch.setattr(torch.mps, "empty_cache", lambda: None)
     monkeypatch.setattr(torch.mps, "driver_allocated_memory", lambda: 128 << 20)
     monkeypatch.setattr(torch.mps, "recommended_max_memory", lambda: 4 << 30)
+    override = _load_mps_module()._override_max_buffer_length_for_test
+    override(4 << 30)
+    try:
+        yield override
+    finally:
+        override(-1)
 
-    def set_max_buffer_length(nbytes):
-        module = SimpleNamespace(max_buffer_length=lambda: nbytes)
-        monkeypatch.setattr(worker, "_load_mps_module", lambda: module)
 
-    set_max_buffer_length(4 << 30)
-    return set_max_buffer_length
+BUFFER_LIMITS = pytest.mark.parametrize(
+    ("limit", "largest"),
+    [
+        # PyTorch rounds the backing heap up to 2 MiB, so an unaligned limit
+        # still leaves only 1 GiB usable.
+        ((1 << 30) + (1 << 20), 1 << 30),
+        # PyTorch rejects size == maxBufferLength.
+        (1 << 30, (1 << 30) - (2 << 20)),
+    ],
+    ids=["unaligned", "aligned"],
+)
 
 
 @pytest.mark.parametrize(
@@ -131,17 +146,7 @@ def test_cache_budget_handles_model_dimensions(mps_memory, config_name, fields, 
     assert MPSWorker.determine_available_memory(worker) == 1234
 
 
-@pytest.mark.parametrize(
-    ("limit", "largest"),
-    [
-        # PyTorch rounds the backing heap up to 2 MiB, so an unaligned limit
-        # still leaves only 1 GiB usable.
-        ((1 << 30) + (1 << 20), 1 << 30),
-        # PyTorch rejects size == maxBufferLength.
-        (1 << 30, (1 << 30) - (2 << 20)),
-    ],
-    ids=["unaligned", "aligned"],
-)
+@BUFFER_LIMITS
 def test_cache_budget_fits_one_metal_buffer(mps_memory, limit, largest):
     """Upstream puts all KV layers in one buffer, so the budget must fit in it."""
     import transformers
@@ -158,6 +163,20 @@ def test_cache_budget_fits_one_metal_buffer(mps_memory, limit, largest):
     )
     mps_memory(limit)
     assert MPSWorker.determine_available_memory(worker) == largest
+
+
+@BUFFER_LIMITS
+def test_explicit_cache_budget_must_fit_one_metal_buffer(mps_memory, limit, largest):
+    from vllm_metal.pytorch_backend.worker import MPSWorker
+
+    worker = SimpleNamespace(
+        cache_config=SimpleNamespace(kv_cache_memory_bytes=largest),
+    )
+    mps_memory(limit)
+    assert MPSWorker.determine_available_memory(worker) == largest
+    worker.cache_config.kv_cache_memory_bytes = largest + 1
+    with pytest.raises(ValueError, match=f"at most {largest} bytes"):
+        MPSWorker.determine_available_memory(worker)
 
 
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16], ids=["fp16", "bf16"])

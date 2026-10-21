@@ -115,8 +115,18 @@ class MPSWorker(MetalWorker):
     def determine_available_memory(self):
         torch.mps.synchronize()
         torch.mps.empty_cache()
-        if self.cache_config.kv_cache_memory_bytes is not None:
-            return self.cache_config.kv_cache_memory_bytes
+        # Upstream backs all KV layers with one MPS buffer. PyTorch requires
+        # size < maxBufferLength, after rounding up to the heap alignment.
+        limit = _load_mps_module().max_buffer_length()
+        max_buffer = (limit - 1) // _MPS_HEAP_ALIGNMENT * _MPS_HEAP_ALIGNMENT
+        requested = self.cache_config.kv_cache_memory_bytes
+        if requested is not None:
+            if requested > max_buffer:
+                raise ValueError(
+                    f"--kv-cache-memory-bytes={requested} does not fit in one "
+                    f"MPS buffer; use at most {max_buffer} bytes on this device."
+                )
+            return requested
         hf = self.model_config.hf_text_config
         hidden_size = self.model_config.get_hidden_size()
         intermediate_size = getattr_iter(
@@ -146,10 +156,6 @@ class MPSWorker(MetalWorker):
             raise ValueError(
                 "MPS model and activation allowance exceed the memory budget"
             )
-        # Upstream backs all KV layers with one MPS buffer. PyTorch requires
-        # size < maxBufferLength, after rounding up to the heap alignment.
-        limit = _load_mps_module().max_buffer_length()
-        max_buffer = (limit - 1) // _MPS_HEAP_ALIGNMENT * _MPS_HEAP_ALIGNMENT
         return min(available, max_buffer)
 
     def synchronize_device(self):
