@@ -681,7 +681,6 @@ class _PagedRoutingOpsSpy:
             "gqa_decode": True,
             "gqa_disable": True,
             "decode_routing_metadata": True,
-            "gqa_batch_context_lens": True,
             "gqa_length_plan": True,
         }
 
@@ -720,7 +719,6 @@ class _PagedRoutingOpsSpy:
         block_size: int,
         _max_seq_len: int,
         _sliding_window: int,
-        _out: mx.array,
         window_seqlen_q: int = 1,
         sinks: mx.array | None = None,
         mm_prefix_ranges: mx.array | None = None,
@@ -728,11 +726,10 @@ class _PagedRoutingOpsSpy:
         num_decode_tokens: int = 0,
         max_decode_context_len: int = 0,
         gqa_disabled: bool = False,
-        gqa_context_lens: list[int] | None = None,
         gqa_length_plan: object = None,
         nax_split_hint: int = -1,
         nax_prefill_split_hint: int = -1,
-    ) -> None:
+    ) -> mx.array:
         del window_seqlen_q, sinks
         self.calls[-1].block_tables = block_tables.tolist()
         self.calls[-1].block_size = block_size
@@ -741,10 +738,10 @@ class _PagedRoutingOpsSpy:
         self.calls[-1].mm_prefix_ranges = mm_prefix_ranges
         self.calls[-1].num_decode_tokens = num_decode_tokens
         self.calls[-1].max_decode_context_len = max_decode_context_len
-        self.calls[-1].gqa_context_lens = gqa_context_lens
         self.calls[-1].gqa_length_plan = gqa_length_plan
         self.calls[-1].nax_split_hint = nax_split_hint
         self.calls[-1].nax_prefill_split_hint = nax_prefill_split_hint
+        return mx.zeros_like(_query)
 
 
 class _PreMmPrefixOps(_PagedOpsCapsOff):
@@ -764,7 +761,7 @@ class _PreMmPrefixOps(_PagedOpsCapsOff):
         sinks=None,
         num_decode_requests=-1,
     ):
-        self._spy.paged_attention_primitive(
+        return self._spy.paged_attention_primitive(
             *args,
             window_seqlen_q=window_seqlen_q,
             sinks=sinks,
@@ -820,9 +817,10 @@ class TestSDPAForward:
                 scale,
                 *_args,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["num_kv_heads"] = num_kv_heads
                 captured["scale"] = scale
+                return mx.zeros_like(_query)
 
         with (
             patch.object(sdpa_mod, "get_ops", return_value=_FakeOps()),
@@ -1193,9 +1191,10 @@ class TestSDPAForward:
                 scale,
                 *_args,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["num_kv_heads"] = num_kv_heads
                 captured["scale"] = scale
+                return mx.zeros_like(_query)
 
         with (
             patch.object(
@@ -1277,9 +1276,10 @@ class TestSDPAForward:
                 *_args,
                 sinks=None,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["scale"] = scale
                 captured["sinks"] = sinks
+                return mx.zeros_like(_query)
 
         with (
             patch.object(
@@ -1379,8 +1379,9 @@ class TestSDPAForward:
                 softcap,
                 *_args,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["softcap"] = softcap
+                return mx.zeros_like(_query)
 
         with (
             patch.object(
@@ -1459,9 +1460,10 @@ class TestSDPAForward:
                 value_cache,
                 *_args,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["key_cache"] = key_cache
                 captured["value_cache"] = value_cache
+                return mx.zeros_like(_query)
 
         with (
             patch.object(
@@ -1519,9 +1521,10 @@ class TestSDPAForward:
                 value_cache,
                 *_args,
                 **_kwargs,
-            ) -> None:
+            ) -> mx.array:
                 captured["key_cache"] = key_cache
                 captured["value_cache"] = value_cache
+                return mx.zeros_like(_query)
 
         with (
             patch.object(
@@ -1882,6 +1885,7 @@ class TestPhiAttention:
                 self, _query, _key_cache, _value_cache, _num_kv_heads, scale, *_a, **_k
             ):
                 captured["scale"] = scale
+                return mx.zeros_like(_query)
 
         with (
             patch.object(

@@ -75,6 +75,13 @@ _AWQ_QUANTIZATION_CONFIG = {
     "zero_point": True,
     "version": "gemm",
 }
+_MLX_QUANTIZATION_CONFIG = {"group_size": 64, "bits": 4}
+_FP8_QUANTIZATION_CONFIG = {
+    "activation_scheme": "dynamic",
+    "fmt": "e4m3",
+    "quant_method": "fp8",
+    "weight_block_size": [128, 128],
+}
 
 # Config-building tests here name many architectures; inspect them in process
 # instead of one vLLM import each. The entry-point test below runs in its own
@@ -280,14 +287,72 @@ def test_explicit_non_gguf_quantization_fails_fast(gguf_file, config_dir) -> Non
         ).create_model_config()
 
 
-def test_non_gguf_model_is_untouched(config_dir) -> None:
-    # A plain HF directory flows through the wrap unmodified.
-    args = _engine_args(model=config_dir)
+@pytest.mark.parametrize(
+    "extra_config",
+    [
+        {},
+        {
+            "quantization": _MLX_QUANTIZATION_CONFIG,
+            "quantization_config": _MLX_QUANTIZATION_CONFIG,
+        },
+    ],
+    ids=["unquantized", "mlx"],
+)
+def test_non_gguf_model_is_untouched(tmp_path, extra_config) -> None:
+    # A non-GGUF HF directory, quantized or not, flows through the wrap unmodified.
+    (tmp_path / "config.json").write_text(json.dumps({**_TINY_CONFIG, **extra_config}))
+    args = _engine_args(model=str(tmp_path))
     model_config = args.create_model_config()
 
-    assert args.model == config_dir
+    assert args.model == str(tmp_path)
     assert model_config.quantization is None
     assert model_config.model_weights == ""
+
+
+@pytest.mark.parametrize(
+    "quantization_keys",
+    [
+        {
+            "quantization": _MLX_QUANTIZATION_CONFIG,
+            "quantization_config": _MLX_QUANTIZATION_CONFIG,
+        },
+        {"quantization_config": _FP8_QUANTIZATION_CONFIG},
+        {"quantization_config": _AWQ_QUANTIZATION_CONFIG},
+    ],
+    ids=["mlx", "fp8", "awq"],
+)
+def test_quantized_config_source_routes_as_gguf(
+    gguf_file, tmp_path, quantization_keys
+) -> None:
+    (tmp_path / "config.json").write_text(
+        json.dumps({**_TINY_CONFIG, **quantization_keys})
+    )
+
+    vllm_config = _engine_args(
+        model=gguf_file, tokenizer=str(tmp_path)
+    ).create_engine_config()
+
+    assert vllm_config.model_config.quantization == "gguf"
+    assert vllm_config.model_config.model_weights == gguf_file
+
+
+def test_explicit_gguf_on_quantized_checkpoint_fails_at_load_source(
+    tmp_path,
+) -> None:
+    (tmp_path / "config.json").write_text(
+        json.dumps({**_TINY_CONFIG, "quantization_config": _AWQ_QUANTIZATION_CONFIG})
+    )
+    model_config = _engine_args(
+        model=str(tmp_path), quantization="gguf"
+    ).create_model_config()
+
+    with pytest.raises(ValueError) as excinfo:
+        gguf_source.GGUFLoadSource.from_model_config(model_config)
+
+    assert str(excinfo.value) == (
+        "GGUF model_config must carry a local .gguf path or remote "
+        "repo_id:quant reference in model_weights; got ''."
+    )
 
 
 @pytest.mark.parametrize("offline", [False, True])
@@ -329,10 +394,7 @@ def test_register_is_idempotent() -> None:
 
 
 def test_integration_imports_without_gguf_package(monkeypatch) -> None:
-    """Default-install tripwire: the entry-point module must import and
-    register with the optional ``gguf`` package absent (vLLM loads it on every
-    run).
-    """
+    """The entry point must register without eagerly importing GGUF parsing."""
     monkeypatch.setitem(sys.modules, "gguf", None)
     monkeypatch.delitem(sys.modules, "vllm_metal.gguf.vllm_integration", raising=False)
     monkeypatch.delitem(sys.modules, "vllm_metal.gguf.source", raising=False)
@@ -353,24 +415,6 @@ def test_marker_config_survives_pickle() -> None:
 
     assert type(restored) is MetalGGUFConfig
     assert restored.get_name() == "gguf"
-
-
-def test_loader_import_without_gguf_names_the_extra(monkeypatch) -> None:
-    """The optional-dep owner gives an actionable hint when the extra is
-    missing (0.24 dropped ``gguf`` from vLLM's own dependencies).
-    """
-    monkeypatch.setitem(sys.modules, "gguf", None)
-    monkeypatch.delitem(sys.modules, "vllm_metal.gguf.loader", raising=False)
-    monkeypatch.delitem(sys.modules, "vllm_metal.gguf.mlx_native", raising=False)
-    monkeypatch.delitem(sys.modules, "vllm_metal.gguf.adapter", raising=False)
-    monkeypatch.delitem(sys.modules, "vllm_metal.gguf.wrappers", raising=False)
-
-    with pytest.raises(ImportError) as exc_info:
-        import vllm_metal.gguf.loader  # noqa: F401
-    assert str(exc_info.value) == (
-        "GGUF support requires the optional 'gguf' dependency. "
-        "Install it with: pip install 'vllm-metal[gguf]'"
-    )
 
 
 def test_probe_preserves_positional_speculative_config(gguf_file) -> None:

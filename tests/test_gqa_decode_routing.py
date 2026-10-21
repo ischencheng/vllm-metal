@@ -35,7 +35,6 @@ def test_native_reports_public_routing_capabilities():
         "gqa_decode": True,
         "gqa_disable": True,
         "decode_routing_metadata": True,
-        "gqa_batch_context_lens": True,
         "gqa_length_plan": True,
         "gqa_mixed_decode_plan": True,
         "nax_split_hint": True,
@@ -341,8 +340,7 @@ def _mixed_inputs(
 
 
 def _mixed_call(inputs, **overrides):
-    out = mx.array(0)
-    get_ops().paged_attention_primitive(**(inputs | overrides), out=out)
+    out = get_ops().paged_attention_primitive(**(inputs | overrides))
     mx.eval(out)
     return out
 
@@ -401,9 +399,10 @@ def test_mixed_decode_prefix_uses_gqa(mixed_family, lengths, partition, dtype):
     "geometry,cache_block,dtype,partition",
     [
         ((24, 4, 256, 16), 784, mx.float16, 512),
+        ((24, 4, 256, 32), 800, mx.bfloat16, 512),
         ((16, 2, 256, 32), 1056, mx.bfloat16, 256),
     ],
-    ids=["block16", "block32"],
+    ids=["block16", "block32-800", "block32"],
 )
 def test_mixed_decode_prefix_reads_translated_pages(
     mixed_family, geometry, cache_block, dtype, partition
@@ -602,7 +601,6 @@ def test_policy_has_no_fixed_long_context_ceiling(q, kv, head, block, n):
         (32, 8, 128, 32),
         (16, 2, 256, 8),
         (16, 4, 256, 32),
-        (24, 4, 256, 32),
     ],
 )
 def test_policy_rejects_unmeasured_geometries(q, kv, head, block):
