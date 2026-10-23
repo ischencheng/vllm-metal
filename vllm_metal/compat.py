@@ -287,10 +287,15 @@ def _gemma4_assistant_config_class() -> type[Any]:
 
 
 def _transformers_knows_gemma4_assistant(auto_config: Any) -> bool:
+    from huggingface_hub.errors import StrictDataclassError
+
     try:
         auto_config.for_model("gemma4_assistant")
     except ValueError:
         return False
+    except StrictDataclassError:
+        # Newer Transformers knows the type but rejects its default config.
+        return True
     return True
 
 

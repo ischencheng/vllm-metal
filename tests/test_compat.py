@@ -288,6 +288,19 @@ class TestGemma4MTPConfigCompatPatch:
         assert config.text_config.num_hidden_layers == 4
         assert config.get_text_config() is config.text_config
 
+    def test_known_type_with_invalid_default_config_counts_as_known(self) -> None:
+        from huggingface_hub.errors import StrictDataclassClassValidationError
+
+        def _reject_default_config(_model_type):
+            raise StrictDataclassClassValidationError(
+                "validate_architecture",
+                ValueError("hidden_size_per_layer_input must be 0, got 256"),
+            )
+
+        auto_config = SimpleNamespace(for_model=_reject_default_config)
+
+        assert compat._transformers_knows_gemma4_assistant(auto_config)
+
     def test_registration_time_failures_do_not_stop_other_patches(
         self,
         monkeypatch,
