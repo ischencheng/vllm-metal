@@ -424,11 +424,6 @@ _PADDLEOCR_VL_ARCHITECTURES: frozenset[str] = frozenset(
 )
 
 
-def _join_words(words: list[str]) -> str:
-    """``["a", "b", "c"]`` -> ``"a, b and c"``."""
-    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} and {words[-1]}"
-
-
 class DefaultModelAdapter(ModelAdapter):
     """Default adapter implementation for known model quirks."""
 
@@ -613,15 +608,11 @@ class DefaultModelAdapter(ModelAdapter):
                 keep_audio=keep_audio,
                 keep_video=keep_video,
             )
-            served: list[str] = ["images"]
-            refused: list[str] = []
-            (served if keep_video else refused).append("video")
-            (served if keep_audio else refused).append("audio")
             logger.info(
-                "Metal: Gemma 4 serves %s through the encoder sidecar on the "
-                "mlx_lm text backbone%s",
-                _join_words(served),
-                f"; {_join_words(refused)} inputs are refused" if refused else "",
+                "Metal: Gemma 4 encoder sidecar support: "
+                "image=True, audio=%s, video=%s",
+                keep_audio,
+                keep_video,
             )
 
     @staticmethod
