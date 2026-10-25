@@ -226,7 +226,11 @@ def test_build_uses_reachable_scheduler_widths(
     monkeypatch.setattr(
         dmp, "_load_draft_model", lambda *_: (model, dmp.DraftDims(1, 1, 64))
     )
-    monkeypatch.setattr(dmp, "SDPAPagedAttentionRuntime", Mock())
+    monkeypatch.setattr(
+        dmp,
+        "SDPAPagedAttentionRuntime",
+        Mock(return_value=Mock(kv_group_block_sizes=Mock(return_value=(16,)))),
+    )
     config = SimpleNamespace(
         draft_model_config=SimpleNamespace(model="draft"),
         num_speculative_tokens=3,
@@ -245,7 +249,9 @@ def test_build_uses_reachable_scheduler_widths(
         block_size=16,
         allow_deferred_zero_k_ingest=False,
     )
-    proposer.bind_paged_cache(num_blocks=3, block_size=16, dtype=mx.float32)
+    proposer.bind_paged_cache(
+        Mock(), SimpleNamespace(num_blocks=3), ("d",), dtype=mx.float32
+    )
     proposer.adopt_scheduler_group(0, 32)
     info.reset_mock()  # Ignore the separate model-load message.
     state = _request_state(scheduler_block_ids=[0, 1], token_ids=list(range(31)))

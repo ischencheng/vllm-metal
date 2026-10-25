@@ -31,7 +31,6 @@ from vllm.v1.kv_cache_interface import (  # noqa: E402
 
 from tests.stub_runner import make_cache_config, make_stub_runner  # noqa: E402
 from vllm_metal.attention.caches.placement import KV_CACHE_LAYOUT  # noqa: E402
-from vllm_metal.attention.runtime.hybrid import HybridPagedAttentionRuntime
 from vllm_metal.attention.runtime.sdpa import SDPAPagedAttentionRuntime
 from vllm_metal.config import MetalConfig
 from vllm_metal.stt.policy import STT_SCHED_AVAILABLE_BYTES  # noqa: E402
@@ -195,41 +194,6 @@ class TestWorkerRunnerBoundaryDelegation:
         assert available == STT_SCHED_AVAILABLE_BYTES
         model_runner.scheduler_memory_reporting_mode.assert_called_once_with()
 
-    def test_determine_available_memory_paged_capacity_mode(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        num_blocks = 8
-        block_size_bytes = 16
-        measured_overhead = 200 * 1024 * 1024
-        model_runner = SimpleNamespace(
-            scheduler_memory_reporting_mode=MagicMock(
-                return_value="paged_attention_capacity"
-            ),
-            profile_run=MagicMock(return_value=measured_overhead),
-            paged_attention_runtime=None,
-        )
-        worker = _make_worker(model_runner)
-        worker.get_cache_block_size_bytes = MagicMock(return_value=block_size_bytes)
-
-        def _fake_setup(*, overhead: int) -> None:
-            model_runner.paged_attention_runtime = SimpleNamespace(
-                num_blocks=lambda: num_blocks
-            )
-
-        setup_paged_attention = MagicMock(side_effect=_fake_setup)
-        monkeypatch.setattr(
-            WorkerCachePlanner,
-            "setup_paged_attention",
-            setup_paged_attention,
-        )
-
-        available = MetalWorker.determine_available_memory(worker)
-
-        assert available == num_blocks * block_size_bytes
-        model_runner.profile_run.assert_called_once_with()
-        setup_paged_attention.assert_called_once_with(overhead=measured_overhead)
-        worker.get_cache_block_size_bytes.assert_called_once_with()
-
     def _make_layout_budget_worker(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -292,10 +256,10 @@ class TestWorkerRunnerBoundaryDelegation:
         assert "kv_budget=-0.60GB" in message
         assert "increase --gpu-memory-utilization (currently 0.15)" in message
 
-    def test_layout_budget_skips_dense_block_floor(
+    def test_layout_budget_reports_a_small_positive_budget(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A small positive budget is reported, not rejected, on this path.
+        """A small positive budget is reported, not rejected.
 
         The per-block size here is the dense estimate; vLLM chooses the real
         layout afterwards and a few dense blocks of budget can still yield a
@@ -304,8 +268,7 @@ class TestWorkerRunnerBoundaryDelegation:
         worker = self._make_layout_budget_worker(
             monkeypatch, gpu_memory_utilization=0.5
         )
-        # 2.9 GB budget / 1 GB dense blocks = 2 blocks, under the 16-block
-        # floor the capacity path enforces.
+        # 2.9 GB budget / 1 GB dense blocks = 2 blocks.
         worker.get_cache_block_size_bytes = MagicMock(return_value=1_000_000_000)
 
         assert MetalWorker.determine_available_memory(worker) == 2_900_000_000
@@ -636,7 +599,7 @@ class TestPagedAttentionPlanDiagnostics:
 
         plan = planner._paged_attention_plan(overhead=100_000_000)
         with pytest.raises(ValueError) as exc_info:
-            planner._validate_paged_attention_plan(plan, require_min_blocks=True)
+            planner._validate_paged_attention_plan(plan)
 
         message = str(exc_info.value)
         assert "increase --gpu-memory-utilization (currently 0.15)" in message
@@ -659,7 +622,7 @@ class TestPagedAttentionPlanDiagnostics:
 
         plan = planner._paged_attention_plan(overhead=100_000_000)
         with pytest.raises(ValueError) as exc_info:
-            planner._validate_paged_attention_plan(plan, require_min_blocks=True)
+            planner._validate_paged_attention_plan(plan)
 
         message = str(exc_info.value)
         assert "hybrid_gdn_state" not in message
@@ -684,11 +647,8 @@ class TestPagedAttentionPlanDiagnostics:
 
         assert fraction == gpu_mem_util
 
-    @pytest.mark.parametrize(
-        ("override", "expected_blocks"),
-        [(None, 64), (7, 7), (64, 64), (65, None), (0, None), (-1, None)],
-    )
-    def test_draft_pool_override_through_engine_initialization(
+    @pytest.mark.parametrize(("override", "expected_blocks"), [(None, 64), (7, 7)])
+    def test_draft_model_shares_target_storage_through_engine_initialization(
         self, monkeypatch, override, expected_blocks
     ) -> None:
         runner = make_stub_runner(
@@ -711,7 +671,6 @@ class TestPagedAttentionPlanDiagnostics:
         config.model_config.is_deepseek_v4 = False
         config.model_config.max_model_len = 64
         config.kv_transfer_config = None
-        # Ordinary draft-model speculation still uses count-based SDPA pools.
         config.speculative_config = SimpleNamespace(
             method="draft_model", uses_draft_model=lambda: True
         )
@@ -727,8 +686,8 @@ class TestPagedAttentionPlanDiagnostics:
         drafter._dims = runner._draft_dims
         runner._drafter = drafter
 
-        # Only model patching and host observations are stubbed; both target and
-        # draft pools allocate real arrays, and vLLM plans their scheduler groups.
+        # Only model patching and host observations are stubbed; vLLM plans both
+        # scheduler groups and one real backing holds target and draft layers.
         def patch_model(backend, model):
             model.backend = backend
             return 1
@@ -745,27 +704,23 @@ class TestPagedAttentionPlanDiagnostics:
         monkeypatch.setattr(
             WorkerCachePlanner, "get_model_memory_usage", lambda self: 0
         )
-        build_runtime = MagicMock(wraps=runner.build_paged_attention_runtime)
-        monkeypatch.setattr(runner, "build_paged_attention_runtime", build_runtime)
-
-        if expected_blocks is None:
-            with pytest.raises(ValueError, match="num-gpu-blocks-override"):
-                worker.determine_available_memory()
-            build_runtime.assert_not_called()
-            assert runner.paged_attention_runtime is None
-            assert not hasattr(drafter._model, "backend")
-            return
 
         available_memory = worker.determine_available_memory()
+        assert runner.paged_attention_runtime is None
         groups = get_kv_cache_groups(config, worker.get_kv_cache_spec())
         kv_config = get_kv_cache_config_from_groups(config, groups, available_memory)
+        # EngineCore records the resolved layout after planning.
+        kv_config.kv_cache_layout = config.cache_config.kv_cache_layout
         worker.initialize_from_config(kv_config)
 
-        assert available_memory == expected_blocks * per_block_bytes
+        assert available_memory == 64 * per_block_bytes
         assert kv_config.num_blocks == expected_blocks
-        assert isinstance(runner.paged_attention_runtime, SDPAPagedAttentionRuntime)
-        assert runner.paged_attention_runtime.num_blocks() == expected_blocks
+        target = runner.paged_attention_runtime
+        assert isinstance(target, SDPAPagedAttentionRuntime)
+        assert target.num_blocks() == expected_blocks
         assert drafter._model.backend.num_blocks() == expected_blocks
+        assert drafter._model.backend.storage is target.storage
+        assert drafter.cache_bound
         draft_group = kv_config.kv_cache_groups[drafter._scheduler_group_index]
         assert "draft_layers.0.self_attn" in draft_group.layer_names
 
@@ -777,32 +732,6 @@ class TestHybridPlanGuard:
 
         with pytest.raises(RuntimeError, match="no resolved hybrid_runtime_plan"):
             runner.build_paged_attention_runtime(block_size=16)
-
-    def test_capacity_path_refuses_a_runtime_it_cannot_initialize(
-        self, monkeypatch
-    ) -> None:
-        # Hybrid models always take the layout-budget path; a hybrid runtime on
-        # the capacity path is a routing bug and must say so, not raise an
-        # AttributeError for the missing ``initialize``.
-        hybrid = HybridPagedAttentionRuntime.__new__(HybridPagedAttentionRuntime)
-        runner = SimpleNamespace(
-            validate_paged_attention_support=lambda: None,
-            build_paged_attention_runtime=lambda *, block_size: hybrid,
-        )
-        planner = WorkerCachePlanner(_make_worker(runner))
-        plan = SimpleNamespace(
-            block_size=16,
-            num_blocks=64,
-            per_block_bytes=1,
-            format_breakdown=lambda: "stub",
-        )
-        monkeypatch.setattr(planner, "_paged_attention_plan", lambda **_: plan)
-        monkeypatch.setattr(
-            planner, "_validate_paged_attention_plan", lambda *a, **k: None
-        )
-
-        with pytest.raises(RuntimeError, match="HybridPagedAttentionRuntime"):
-            planner.setup_paged_attention(overhead=0)
 
 
 class TestShutdownClosesConnectorStep:
@@ -1065,7 +994,7 @@ class TestCommitProbeBudget:
         # Free memory less the reserve, kept to the byte: vLLM picks its own
         # grouped layout from the budget it is handed.
         assert plan.kv_budget == (2 << 30) - _PROBE_RESERVE
-        # The count-based path still gets whole blocks of the dense estimate.
+        # The dense estimate's whole blocks, for the log.
         assert plan.num_blocks == 1_073
         assert plan.per_block_bytes == 1_000_000
         assert plan.fraction == 0.5

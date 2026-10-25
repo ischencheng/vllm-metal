@@ -311,7 +311,7 @@ def test_register_hands_the_runtime_storage_to_the_connector(spy_group):
     [
         pytest.param(lambda: None, id="no-runtime"),
         pytest.param(SimpleNamespace, id="non-sdpa-runtime"),
-        # Count-initialized (draft-model) caches never bind storage.
+        # Count-initialized caches never bind storage.
         pytest.param(_sdpa_runtime, id="sdpa-without-storage"),
     ],
 )
@@ -326,4 +326,22 @@ def test_register_rejects_runtimes_without_storage(monkeypatch, runtime_factory)
     runner._paged_attention_runtime = runtime_factory()
 
     with pytest.raises(NotImplementedError, match="KV offloading on Metal"):
+        runner.register_kv_connector_caches()
+
+
+def test_register_rejects_draft_model_speculation(monkeypatch):
+    """The draft's KV shares the target storage, but offloading does not cover it."""
+    import vllm.v1.worker.gpu.kv_connector as upstream
+
+    def forbidden():
+        raise AssertionError("registered draft-model KV with the connector")
+
+    monkeypatch.setattr(upstream, "get_kv_transfer_group", forbidden)
+    runtime = _sdpa_runtime()
+    runtime._storage = object()
+    runner = make_stub_runner(model=SimpleNamespace())
+    runner._paged_attention_runtime = runtime
+    runner._draft_dims = SimpleNamespace(num_layers=1)
+
+    with pytest.raises(NotImplementedError, match="draft-model"):
         runner.register_kv_connector_caches()

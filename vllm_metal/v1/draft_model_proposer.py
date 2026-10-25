@@ -83,7 +83,9 @@ if TYPE_CHECKING:
 
     from vllm.config import ParallelConfig
     from vllm.config.speculative import SpeculativeConfig
+    from vllm.v1.kv_cache_interface import KVCacheConfig
 
+    from vllm_metal.attention.caches.storage import KVCacheStorage
     from vllm_metal.v1.model_adapter import ModelAdapter
     from vllm_metal.v1.model_runner import (
         MetalModelRunner,
@@ -195,13 +197,13 @@ class DraftModelProposer(NoOwnKVProposer):
         # never correctness.
         self._spec_kv_writes: dict[str, dict[int, tuple[int, int]]] = {}
         # Scheduler-owned KV-cache group for committed tokens and lookahead.
-        # Unknown at construction time -- the physical backend below is
-        # built before the scheduler has decided kv_cache_config (see
-        # ModelCachePolicy._adopt_draft_scheduler_group) -- so this is set
+        # Unknown until the engine has decided kv_cache_config (see
+        # ModelCachePolicy._adopt_draft_scheduler_group), so this is set
         # later via adopt_scheduler_group().
         self._scheduler_group_index: int | None = None
         self._dims: DraftDims | None = None
         self._draft_model_name: str | None = None
+        self._cache_bound = False
 
     # -- construction --------------------------------------------------------
 
@@ -276,27 +278,33 @@ class DraftModelProposer(NoOwnKVProposer):
 
     def bind_paged_cache(
         self,
+        storage: KVCacheStorage,
+        config: KVCacheConfig,
+        layer_names: tuple[str, ...],
         *,
-        num_blocks: int,
-        block_size: int,
         dtype: mx.Dtype,
     ) -> None:
-        """Allocate the draft KV pool and patch attention. Weights stay put."""
+        """Bind the draft layers' views of ``storage`` and patch attention.
+
+        ``storage`` is the target runtime's allocation of ``config``, which
+        holds the draft model's scheduler group too. Weights stay put.
+        """
         dims = self._dims
         if dims is None:
             raise RuntimeError(
                 "DraftModelProposer.bind_paged_cache() requires build() first"
             )
-        self._block_size = block_size
         backend = SDPAPagedAttentionRuntime(
             num_layers=dims.num_layers,
             num_kv_heads=dims.num_kv_heads,
             head_dim=dims.head_dim,
-            block_size=block_size,
+            block_size=self._block_size,
             dtype=dtype,
         )
-        backend.initialize(num_blocks)
+        backend.initialize_from_config(config, layer_names, storage=storage)
+        self._block_size = backend.kv_group_block_sizes()[0]
         n_patched = backend.patch_model(self._model)
+        self._cache_bound = True
         logger.info(
             "Draft model paged cache bound: %s "
             "(layers=%d, kv_heads=%d, head_dim=%d, patched=%d, "
@@ -306,9 +314,13 @@ class DraftModelProposer(NoOwnKVProposer):
             dims.num_kv_heads,
             dims.head_dim,
             n_patched,
-            num_blocks,
+            config.num_blocks,
             self._selective_logits_supported,
         )
+
+    @property
+    def cache_bound(self) -> bool:
+        return self._cache_bound
 
     def _ingest_window_mismatch(self) -> str | None:
         """Why committed-token ingest stays expanded, or ``None`` when it merges.
@@ -328,8 +340,7 @@ class DraftModelProposer(NoOwnKVProposer):
         """Adopt the scheduler cache group and final target context limit.
 
         Called from ``ModelCachePolicy._adopt_draft_scheduler_group`` once
-        ``kv_cache_config`` exists -- after ``bind_paged_cache``, since the
-        physical backend is sized before the scheduler has decided groups.
+        ``kv_cache_config`` exists.
         """
         self._scheduler_group_index = group_index
         # The engine may auto-fit the target limit after memory profiling.

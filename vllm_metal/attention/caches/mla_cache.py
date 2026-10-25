@@ -15,8 +15,8 @@ class MLAPagedLatentCache:
 
     Layout per layer: [num_blocks, block_size, latent_dim].
 
-    The count-based path (draft-model speculation) allocates its own arrays;
-    otherwise MLA binds views of the scheduler-owned shared cache storage.
+    MLA binds views of the scheduler-owned shared cache storage; the
+    count-based constructor (tests only) allocates its own arrays.
     """
 
     @classmethod

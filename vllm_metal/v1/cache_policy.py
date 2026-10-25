@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import mlx.core as mx
 import torch
@@ -41,7 +41,6 @@ from vllm_metal.attention.runtime.protocol import PagedAttentionRuntime
 from vllm_metal.attention.runtime.sdpa import SDPAPagedAttentionRuntime
 from vllm_metal.attention.yoco import try_enable_gemma4_yoco_fast_prefill
 from vllm_metal.config import (
-    PAGED_ATTENTION_MIN_BLOCKS,
     MetalConfig,
     get_config,
 )
@@ -428,7 +427,6 @@ class ModelCachePolicy:
     def scheduler_memory_reporting_mode(
         self,
     ) -> Literal[
-        "paged_attention_capacity",
         "paged_attention_layout_budget",
         "pooling_no_kv",
     ]:
@@ -439,9 +437,7 @@ class ModelCachePolicy:
             and not pooling_backend.capabilities.uses_kv_cache
         ):
             return "pooling_no_kv"
-        if self._uses_upstream_storage():
-            return "paged_attention_layout_budget"
-        return "paged_attention_capacity"
+        return "paged_attention_layout_budget"
 
     def _hybrid_plan(self) -> HybridRuntimePlan:
         """Return the resolved hybrid plan, failing fast if lifecycle skipped it."""
@@ -452,9 +448,6 @@ class ModelCachePolicy:
                 "ModelLifecycle.resolve_model_dims must run before cache sizing"
             )
         return plan
-
-    def _uses_upstream_storage(self) -> bool:
-        return self._runner.is_hybrid or self._runner._draft_dims is None
 
     def _uses_grouped_attention(self) -> bool:
         """Return whether the scheduler keeps distinct attention-window groups."""
@@ -599,6 +592,15 @@ class ModelCachePolicy:
             dtype=torch_dtype,
         )
 
+    def _draft_layer_names(self) -> tuple[str, ...]:
+        draft_dims = self._runner._draft_dims
+        if draft_dims is None:
+            return ()
+        return tuple(
+            f"draft_layers.{layer_idx}.self_attn"
+            for layer_idx in range(draft_dims.num_layers)
+        )
+
     def _draft_layer_specs(
         self, *, block_size: int, torch_dtype: torch.dtype
     ) -> dict[str, KVCacheSpec]:
@@ -613,13 +615,13 @@ class ModelCachePolicy:
         if draft_dims is None:
             return {}
         return {
-            f"draft_layers.{layer_idx}.self_attn": FullAttentionSpec(
+            name: FullAttentionSpec(
                 block_size=block_size,
                 num_kv_heads=draft_dims.num_kv_heads,
                 head_size=draft_dims.head_dim,
                 dtype=torch_dtype,
             )
-            for layer_idx in range(draft_dims.num_layers)
+            for name in self._draft_layer_names()
         }
 
     def _build_attention_spec(
@@ -648,11 +650,7 @@ class ModelCachePolicy:
         )
 
     def initialize_kv_cache(self, kv_cache_config: KVCacheConfig) -> None:
-        """Bind layout-driven caches from the final engine configuration.
-
-        Count-initialized draft-model runtimes adopt the engine's groups;
-        other runtimes bind the engine's shared backing here.
-        """
+        """Bind every runtime to the engine's shared backing."""
         self._adopt_draft_scheduler_group(kv_cache_config)
         runtime = self._runner.paged_attention_runtime
         pooling_backend = self._runner._pooling_backend
@@ -668,32 +666,14 @@ class ModelCachePolicy:
             logger.info("Encoder pooling: no KV cache initialized.")
             return
 
-        if self._uses_upstream_storage():
-            if runtime is not None:
-                raise RuntimeError(
-                    "upstream storage must be initialized after cache planning"
-                )
-            self._initialize_upstream_storage(kv_cache_config)
-            logger.info(
-                "KV cache config received: %d grouped blocks "
-                "(MLX layout initialized from vLLM config)",
-                kv_cache_config.num_blocks,
-            )
-            return
-
-        if runtime is not None and kv_cache_config.num_blocks > runtime.num_blocks():
-            raise ValueError(
-                f"Engine KV cache config requests {kv_cache_config.num_blocks} "
-                f"blocks but the Metal paged pool was allocated with "
-                f"{runtime.num_blocks()}. vllm-metal sizes its pool from "
-                "available Metal memory and cannot grow it afterwards. If "
-                "--num-gpu-blocks-override is set, lower or remove it; "
-                "otherwise this is a capacity-accounting bug, please report it."
-            )
         if runtime is not None:
-            self._adopt_scheduler_groups(runtime, kv_cache_config)
+            raise RuntimeError(
+                "upstream storage must be initialized after cache planning"
+            )
+        self._initialize_upstream_storage(kv_cache_config)
         logger.info(
-            "KV cache config received: %d blocks (MLX manages cache internally)",
+            "KV cache config received: %d grouped blocks "
+            "(MLX layout initialized from vLLM config)",
             kv_cache_config.num_blocks,
         )
 
@@ -706,10 +686,7 @@ class ModelCachePolicy:
             self._runner.install_paged_attention_runtime(
                 runtime, block_size=self._runner.cache_config.block_size
             )
-            self._runner.install_drafter(
-                num_blocks=kv_cache_config.num_blocks,
-                block_size=self._runner.cache_config.block_size,
-            )
+            self._runner.install_drafter()
             return
         model_layer_names = self._attention_layer_names()
         runtime = (
@@ -738,48 +715,35 @@ class ModelCachePolicy:
                 group_index=groups[0],
                 max_model_len=self._runner.model_config.max_model_len,
             )
-        self._runner.install_drafter(
-            num_blocks=kv_cache_config.num_blocks, block_size=block_size
-        )
+        if self._runner._draft_dims is not None:
+            from vllm_metal.v1.draft_model_proposer import DraftModelProposer
+
+            # _adopt_draft_scheduler_group has checked the drafter type and its
+            # single scheduler group.
+            cast(DraftModelProposer, self._runner._drafter).bind_paged_cache(
+                runtime.storage,
+                kv_cache_config,
+                self._draft_layer_names(),
+                dtype=self._require_kv_cache_dtype(),
+            )
+        self._runner.install_drafter()
         try_enable_gemma4_yoco_fast_prefill(
             self._runner.model,
             self._runner.model_args,
             num_paged_layers=n_patched,
         )
 
-    def _adopt_scheduler_groups(
-        self,
-        runtime: PagedAttentionRuntime,
-        kv_cache_config: KVCacheConfig,
-    ) -> None:
-        if isinstance(runtime, SDPAPagedAttentionRuntime):
-            runtime.adopt_scheduler_groups(
-                kv_cache_config, self._attention_layer_names()
-            )
-            self._runner.install_paged_attention_runtime(
-                runtime, block_size=runtime.kv_group_block_sizes()[0]
-            )
-
     def _adopt_draft_scheduler_group(self, kv_cache_config: KVCacheConfig) -> None:
         """Pass the scheduler KV group and final context limit to the drafter.
 
-        The draft model's own physical backend is already built by this
-        point (``install_drafter``, called from ``determine_available_memory``
-        -- before the engine has computed ``kv_cache_config``, so it cannot
-        know its group index at construction time). This runs after, once
-        ``kv_cache_config.kv_cache_groups`` exists, and resolves which group
-        the synthetic ``draft_layers.*`` names from
-        ``ModelCachePolicy._draft_layer_specs`` landed in -- mirroring
-        ``_adopt_scheduler_groups``'s resolution for the target. No-op without a
-        draft model configured.
+        Resolves which group the synthetic ``draft_layers.*`` names from
+        ``ModelCachePolicy._draft_layer_specs`` landed in, once
+        ``kv_cache_config.kv_cache_groups`` exists. No-op without a draft
+        model configured.
         """
-        draft_dims = self._runner._draft_dims
-        if draft_dims is None:
+        if self._runner._draft_dims is None:
             return
-        layer_names = tuple(
-            f"draft_layers.{layer_idx}.self_attn"
-            for layer_idx in range(draft_dims.num_layers)
-        )
+        layer_names = self._draft_layer_names()
         group_indices = self._scheduler_group_indices_for_layers(
             kv_cache_config, layer_names
         )
@@ -1051,80 +1015,6 @@ class WorkerCachePlanner:
     def __init__(self, worker: MetalWorker) -> None:
         self._worker = worker
 
-    def setup_paged_attention(self, *, overhead: int) -> None:
-        """Allocate paged KV cache and patch the loaded model."""
-        self._worker.model_runner.validate_paged_attention_support()
-        plan = self._paged_attention_plan(overhead=overhead)
-        self._validate_paged_attention_plan(plan, require_min_blocks=True)
-        num_blocks = plan.num_blocks
-        override = self._worker.vllm_config.cache_config.num_gpu_blocks_override
-        if override is not None:
-            if override <= 0:
-                raise ValueError("--num-gpu-blocks-override must be positive")
-            if override > num_blocks:
-                raise ValueError(
-                    f"--num-gpu-blocks-override={override} exceeds the planned "
-                    f"Metal cache capacity of {num_blocks} blocks. "
-                    "Lower or remove the override."
-                )
-            num_blocks = override
-        logger.info(
-            "Paged attention memory breakdown: "
-            "%s, per_block_bytes=%d, "
-            "num_blocks=%d, max_tokens_cached=%d",
-            plan.format_breakdown(),
-            plan.per_block_bytes,
-            num_blocks,
-            num_blocks * plan.block_size,
-        )
-
-        backend = self._worker.model_runner.build_paged_attention_runtime(
-            block_size=plan.block_size
-        )
-        # Only draft-model speculation still sizes its pool here
-        # (``ModelCachePolicy._uses_upstream_storage``), so only the SDPA and
-        # MLA target runtimes, which own ``initialize``, reach this path.
-        if not isinstance(
-            backend, (SDPAPagedAttentionRuntime, MLAPagedAttentionRuntime)
-        ):
-            raise RuntimeError(
-                "Paged attention: the capacity path initializes only the SDPA "
-                f"and MLA runtimes; {type(backend).__name__} sizes its cache "
-                "from vLLM's KV cache config"
-            )
-        backend.initialize(num_blocks)
-        self._worker.model_runner.install_gemma4_mtp_kv_sharing(
-            backend,
-            block_size=plan.block_size,
-        )
-        n_patched = backend.patch_model(self._worker.model_runner.model)
-        self._worker.model_runner.install_drafter(
-            num_blocks=num_blocks,
-            block_size=plan.block_size,
-        )
-        config = get_config()
-
-        try_enable_gemma4_yoco_fast_prefill(
-            self._worker.model_runner.model,
-            self._worker.model_runner.model_args,
-            num_paged_layers=n_patched,
-        )
-        logger.info(
-            "Paged attention enabled: %d layers patched, "
-            "%d blocks allocated (block_size=%d, mla=%s, turboquant=%s, k_quant=%s)",
-            n_patched,
-            num_blocks,
-            plan.block_size,
-            self._worker.model_runner.is_mla,
-            config.turboquant,
-            config.k_quant if config.turboquant else "N/A",
-        )
-
-        self._worker.model_runner.install_paged_attention_runtime(
-            backend,
-            block_size=plan.block_size,
-        )
-
     def get_model_memory_usage(self) -> int:
         """Return current model memory usage in bytes."""
         mx.eval(mx.array([0]))
@@ -1138,33 +1028,11 @@ class WorkerCachePlanner:
             logger.info("STT model: reporting nominal memory for scheduler")
             return STT_SCHED_AVAILABLE_BYTES
 
-        if mode == "paged_attention_capacity":
-            overhead = self._worker.model_runner.profile_run()
-            self.setup_paged_attention(overhead=overhead)
-            backend = self._worker.model_runner.paged_attention_runtime
-            if backend is None:
-                raise RuntimeError(
-                    "Paged attention backend not initialized for capacity reporting"
-                )
-            block_size_bytes = self._worker.get_cache_block_size_bytes()
-            available = backend.num_blocks() * block_size_bytes
-            logger.info(
-                "Paged attention: reporting MPS cache capacity "
-                "(%d blocks × %d bytes = %.2f GB)",
-                backend.num_blocks(),
-                block_size_bytes,
-                available / 1e9,
-            )
-            return available
-
         if mode == "paged_attention_layout_budget":
             overhead = self._worker.model_runner.profile_run()
             plan = self._paged_attention_plan(overhead=overhead)
             if self._worker.vllm_config.cache_config.num_gpu_blocks_override is None:
-                self._validate_paged_attention_plan(
-                    plan,
-                    require_min_blocks=False,
-                )
+                self._validate_paged_attention_plan(plan)
             budget = plan.kv_budget
             logger.info(
                 "Upstream cache layout: reporting %.2f GB KV budget; "
@@ -1441,7 +1309,6 @@ class WorkerCachePlanner:
         # Keep the unrounded fit as the budget: vLLM picks its own grouped
         # layout from the bytes it is handed, so rounding here to the dense
         # per-block estimate would throw away capacity the layout can use.
-        # ``num_blocks`` is the count-based path's allocation size.
         num_blocks = fit // plan.per_block_bytes
         logger.warning(
             "Paged attention: KV cache sized down from %.2f GB to %.2f GB "
@@ -1464,22 +1331,11 @@ class WorkerCachePlanner:
             max(0, room),
         )
 
-    def _validate_paged_attention_plan(
-        self, plan: _PagedAttentionPlan, *, require_min_blocks: bool
-    ) -> None:
+    def _validate_paged_attention_plan(self, plan: _PagedAttentionPlan) -> None:
         if plan.kv_budget <= 0:
             raise ValueError(
                 "Paged attention: not enough Metal memory for KV cache. "
                 f"{plan.format_breakdown()}. {plan.format_mitigations()}"
-            )
-
-        if require_min_blocks and plan.num_blocks < PAGED_ATTENTION_MIN_BLOCKS:
-            raise ValueError(
-                "Paged attention: computed num_blocks too low "
-                f"({plan.num_blocks} < minimum {PAGED_ATTENTION_MIN_BLOCKS}). "
-                f"{plan.format_breakdown()}, "
-                f"per_block_bytes={plan.per_block_bytes}. "
-                f"{plan.format_mitigations()}"
             )
 
     def _memory_fraction(self) -> float:

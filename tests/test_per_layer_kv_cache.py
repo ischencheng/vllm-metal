@@ -38,10 +38,7 @@ from vllm_metal.attention.impls.sdpa_wrapper import SDPAPagedAttentionWrapper
 from vllm_metal.attention.runtime.sdpa import (
     SDPAPagedAttentionRuntime,
 )
-from vllm_metal.config import (
-    PAGED_ATTENTION_MIN_BLOCKS,
-    MetalConfig,
-)
+from vllm_metal.config import MetalConfig
 from vllm_metal.metal import get_ops
 from vllm_metal.v1.cache_policy import WorkerCachePlanner
 from vllm_metal.v1.model_adapter import DefaultModelAdapter
@@ -718,7 +715,7 @@ class TestUpstreamAttentionStorage:
         monkeypatch.setattr(
             planner,
             "_metal_limit_bytes",
-            lambda: dense_block_bytes * PAGED_ATTENTION_MIN_BLOCKS,
+            lambda: dense_block_bytes * 16,
         )
 
         available = planner.determine_available_memory()

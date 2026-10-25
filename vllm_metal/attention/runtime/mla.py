@@ -44,9 +44,9 @@ class MLAPagedAttentionRuntime(PagedAttentionRuntimeBase):
         self._wrappers: list[MLAPagedAttentionWrapper] = []
 
     def initialize(self, num_blocks: int) -> None:
-        # TODO: Move draft-model speculation's target KV to initialize_from_config.
-        # Then remove this initializer and MLAPagedLatentCache's count-based
-        # allocation.
+        # TODO: Only tests still size caches by block count. Build their caches
+        # from a KVCacheConfig, then remove this initializer and
+        # MLAPagedLatentCache's count-based allocation.
         self._cache = MLAPagedLatentCache(
             num_layers=self._num_layers,
             latent_dim=self._latent_dim,

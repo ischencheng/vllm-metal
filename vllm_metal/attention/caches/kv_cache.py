@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Key/value views consumed by native Metal paged attention.
 
-Target attention binds vLLM's allocation through ``from_upstream``.
-Model-based speculative decoding still uses the count-based constructor.
+Target and draft-model attention bind vLLM's allocation through
+``from_upstream``; only tests use the count-based constructor.
 Native writes return aliased handles whose dependencies are retained by the
 cache owner. Scheduler block tables determine which pages each request uses.
 """
@@ -30,7 +30,7 @@ logger = init_logger(__name__)
 class MetalPagedKVCache:
     """Native attention cache views, with allocation delegated to vLLM.
 
-    The count-based constructor remains for model-based speculative decoding.
+    The count-based constructor remains for tests.
     """
 
     @classmethod

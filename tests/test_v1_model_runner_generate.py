@@ -136,7 +136,7 @@ def test_gemma4_mtp_config_installs_gemma4_proposer() -> None:
         ),
     )
 
-    runner.install_drafter(num_blocks=1, block_size=16)
+    runner.install_drafter()
 
     assert isinstance(runner._drafter, Gemma4MTPProposer)
 
@@ -171,13 +171,14 @@ def test_draft_model_loads_before_cache_binding(
     build.assert_called_once()
     proposer.bind_paged_cache.assert_not_called()
 
-    runner.install_drafter(num_blocks=9, block_size=32)
+    # The cache policy binds the draft cache once kv_cache_config exists.
+    proposer.cache_bound = False
+    with pytest.raises(RuntimeError, match="not loaded and bound"):
+        runner.install_drafter()
 
-    proposer.bind_paged_cache.assert_called_once_with(
-        num_blocks=9,
-        block_size=32,
-        dtype=mx.float16,
-    )
+    proposer.cache_bound = True
+    runner.install_drafter()
+    proposer.bind_paged_cache.assert_not_called()
 
 
 class TestDrafterReleaseOnLifecycle:

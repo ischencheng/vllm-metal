@@ -43,10 +43,11 @@ class _CachelessDraftModel:
         return mx.zeros((1, int(input_ids.shape[1]), VOCAB_SIZE), dtype=mx.float32)
 
 
-def test_bind_paged_cache_initializes_backend(monkeypatch):
+def test_bind_paged_cache_binds_views_of_shared_storage(monkeypatch):
     model = _CachelessDraftModel()
     backend = Mock()
     backend.patch_model.return_value = 1
+    backend.kv_group_block_sizes.return_value = (32,)
     runtime_cls = Mock(return_value=backend)
     monkeypatch.setattr(
         draft_model_proposer,
@@ -72,17 +73,26 @@ def test_bind_paged_cache_initializes_backend(monkeypatch):
         block_size=BLOCK_SIZE,
         allow_deferred_zero_k_ingest=False,
     )
-    proposer.bind_paged_cache(num_blocks=7, block_size=32, dtype=mx.float16)
+    storage, config = Mock(), SimpleNamespace(num_blocks=7)
+    assert not proposer.cache_bound
+
+    proposer.bind_paged_cache(
+        storage, config, ("draft_layers.0.self_attn",), dtype=mx.float16
+    )
 
     runtime_cls.assert_called_once_with(
         num_layers=1,
         num_kv_heads=2,
         head_dim=64,
-        block_size=32,
+        block_size=BLOCK_SIZE,
         dtype=mx.float16,
     )
-    backend.initialize.assert_called_once_with(7)
+    backend.initialize_from_config.assert_called_once_with(
+        config, ("draft_layers.0.self_attn",), storage=storage
+    )
+    backend.initialize.assert_not_called()
     backend.patch_model.assert_called_once_with(model)
+    assert proposer.cache_bound
 
 
 def test_profile_warmup_clips_to_draft_context_limit() -> None:

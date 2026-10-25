@@ -57,16 +57,11 @@ class MemoryProbe:
         mx.synchronize()
         runner = self.model_runner
         runtime = runner.paged_attention_runtime
-        # Ordinary draft_model still uses count-initialized target/draft pools.
-        # Its public page-byte helper includes both models; shared layouts must
-        # instead count the one backing allocation, never sum aliasing views.
+        # Count the one backing allocation, never sum aliasing views.
         mode = runner.scheduler_memory_reporting_mode()
-        if mode == "paged_attention_capacity":
-            kv_bytes = runtime.num_blocks() * runner.get_cache_block_size_bytes()
-        elif mode == "paged_attention_layout_budget":
-            kv_bytes = runtime.storage.nbytes
-        else:
+        if mode != "paged_attention_layout_budget":
             raise ValueError(f"Unsupported benchmark cache mode: {mode}")
+        kv_bytes = runtime.storage.nbytes
         result = {
             "mlx_active_bytes": mx.get_active_memory(),
             "mlx_peak_bytes": mx.get_peak_memory(),

@@ -148,7 +148,6 @@ logger = init_logger(__name__)
 
 SchedulerMemoryReportingMode: TypeAlias = Literal[
     "stt_nominal",
-    "paged_attention_capacity",
     "paged_attention_layout_budget",
     "pooling_no_kv",
 ]
@@ -1025,10 +1024,16 @@ class MetalModelRunner:
 
         Called by the worker after ``initialize_kv_cache`` when a KV connector
         is configured. Only the SDPA runtime's ``KVCacheStorage`` is registered.
-        Hybrid and count-based (draft model) caches have no layout the connector
-        can address, and KV offloading does not support MLA models yet.
+        Hybrid caches have no layout the connector can address, and KV
+        offloading does not support MLA models or draft-model speculation yet.
         """
         from vllm_metal.attention.runtime.sdpa import SDPAPagedAttentionRuntime
+
+        if self._draft_dims is not None:
+            raise NotImplementedError(
+                "KV offloading on Metal does not support draft-model "
+                "speculative decoding yet."
+            )
 
         runtime = self._paged_attention_runtime
         storage = None
@@ -1375,8 +1380,8 @@ class MetalModelRunner:
             block_size=block_size,
         )
 
-    def install_drafter(self, *, num_blocks: int, block_size: int) -> None:
-        """Install or bind the configured drafter after cache planning."""
+    def install_drafter(self) -> None:
+        """Install the configured drafter, or check its KV binding, after cache planning."""
         spec = self.vllm_config.speculative_config
         if spec is None:
             return
@@ -1393,17 +1398,14 @@ class MetalModelRunner:
                     f"{spec.method} was not loaded and bound to scheduler KV"
                 )
         elif spec.uses_draft_model():
-            drafter = cast(DraftModelProposer, self._drafter)
-            drafter.bind_paged_cache(
-                num_blocks=num_blocks,
-                block_size=block_size,
-                dtype=cast(mx.Dtype, self.kv_cache_dtype),
-            )
+            if not cast(DraftModelProposer, self._drafter).cache_bound:
+                raise RuntimeError(
+                    "draft_model was not loaded and bound to scheduler KV"
+                )
         elif spec.method == "ngram":
             from vllm_metal.v1.ngram_proposer import NgramProposer
 
-            # N-gram drafts from token history alone — no model, no KV cache, so
-            # num_blocks/block_size are unused here.
+            # N-gram drafts from token history alone — no model, no KV cache.
             self._drafter = NgramProposer.build(
                 vllm_config=self.vllm_config,
                 controller=self._spec_decode_controller,

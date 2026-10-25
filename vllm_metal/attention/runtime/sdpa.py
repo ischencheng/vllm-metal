@@ -21,7 +21,6 @@ class SDPAPagedAttentionRuntime(PagedAttentionRuntimeBase):
     """Paged attention runtime for SDPA attention models (MHA, GQA, MQA).
 
     Bind upstream cache storage and patch model layers for native Metal kernels.
-    Model-based speculative decoding still uses count-initialized storage.
     """
 
     def __init__(
@@ -58,9 +57,9 @@ class SDPAPagedAttentionRuntime(PagedAttentionRuntimeBase):
         self._group_block_sizes = (block_size,)
 
     def initialize(self, num_blocks: int) -> None:
-        # TODO: Move model-based speculation's target and committed draft KV to
-        # initialize_from_config, handling lookahead scratch separately. Then
-        # remove this initializer and MetalPagedKVCache's count-based allocation.
+        # TODO: Only tests still size caches by block count. Build their caches
+        # from a KVCacheConfig, then remove this initializer and
+        # MetalPagedKVCache's count-based allocation.
         self._cache = MetalPagedKVCache(
             num_layers=self._num_layers,
             num_kv_heads=self._num_kv_heads,
@@ -77,10 +76,18 @@ class SDPAPagedAttentionRuntime(PagedAttentionRuntimeBase):
         )
 
     def initialize_from_config(
-        self, config: KVCacheConfig, layer_names: tuple[str, ...]
+        self,
+        config: KVCacheConfig,
+        layer_names: tuple[str, ...],
+        *,
+        storage: KVCacheStorage | None = None,
     ) -> None:
-        """Use the physical allocation and views planned by vLLM."""
-        self._storage = KVCacheStorage(config)
+        """Use the physical allocation and views planned by vLLM.
+
+        Pass ``storage`` to bind views of an allocation another runtime
+        already owns, as a draft model does with the target's.
+        """
+        self._storage = KVCacheStorage(config) if storage is None else storage
         self._cache = MetalPagedKVCache.from_upstream(
             self._storage, layer_names, dtype=self._dtype
         )
@@ -138,7 +145,7 @@ class SDPAPagedAttentionRuntime(PagedAttentionRuntimeBase):
 
     def release_kv_memory(self) -> None:
         if self._storage is None:
-            # Count-initialized caches (draft-model speculation) own their arrays.
+            # Count-initialized caches (tests only) own their arrays.
             super().release_kv_memory()
         self.storage.release()
 
