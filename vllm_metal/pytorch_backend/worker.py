@@ -117,6 +117,8 @@ class MPSWorker(MetalWorker):
         torch.mps.empty_cache()
         # Upstream backs all KV layers with one MPS buffer. PyTorch requires
         # size < maxBufferLength, after rounding up to the heap alignment.
+        # TODO: total KV capacity should not be capped by one buffer; this is a
+        # current limitation of the Apple Silicon MPS path.
         limit = _load_mps_module().max_buffer_length()
         max_buffer = (limit - 1) // _MPS_HEAP_ALIGNMENT * _MPS_HEAP_ALIGNMENT
         requested = self.cache_config.kv_cache_memory_bytes
