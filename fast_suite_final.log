@@ -1,0 +1,8 @@
+3a09336 Turn on native MLX sampling by default
+All checks passed!
+452 files already formatted
+Success: no issues found in 184 source files
+    warnings.warn(NumbaPendingDeprecationWarning(msg, loc=loc))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5906 passed, 15 skipped, 299 deselected, 16 warnings in 153.73s (0:02:33)

@@ -1,0 +1,17 @@
+vocab=151936 reps=40 times in ms: median (min-max)
+B=1 greedy_native 0.305
+B=1 qwen3_default(t0.6,k20,p0.95)  torch_cpu   6.536 (6.346-7.065)  mlx_native   0.540 (0.486-1.849)
+B=1 t0.7,p0.9                      torch_cpu   6.324 (6.164-6.542)  mlx_native   0.522 (0.478-1.869)
+B=1 t1.0_only                      torch_cpu   1.351 (1.322-1.417)  mlx_native   0.431 (0.403-1.296)
+B=4 greedy_native 0.178
+B=4 qwen3_default(t0.6,k20,p0.95)  torch_cpu  10.268 (10.091-10.484)  mlx_native   0.906 (0.823-1.832)
+B=4 t0.7,p0.9                      torch_cpu  10.138 (9.932-10.667)  mlx_native   0.854 (0.800-2.272)
+B=4 t1.0_only                      torch_cpu   4.760 (4.607-4.954)  mlx_native   0.737 (0.680-1.712)
+B=8 greedy_native 0.177
+B=8 qwen3_default(t0.6,k20,p0.95)  torch_cpu  19.945 (19.709-20.393)  mlx_native   1.440 (1.405-2.950)
+B=8 t0.7,p0.9                      torch_cpu  19.722 (19.423-20.347)  mlx_native   1.412 (1.352-1.538)
+B=8 t1.0_only                      torch_cpu   9.024 (8.864-9.228)  mlx_native   1.227 (1.188-1.308)
+B=16 greedy_native 0.175
+B=16 qwen3_default(t0.6,k20,p0.95)  torch_cpu  34.190 (33.667-34.983)  mlx_native   3.137 (3.066-3.254)
+B=16 t0.7,p0.9                      torch_cpu  34.076 (33.495-34.590)  mlx_native   3.048 (2.968-3.188)
+B=16 t1.0_only                      torch_cpu  17.526 (17.303-18.055)  mlx_native   2.650 (2.608-3.839)

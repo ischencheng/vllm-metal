@@ -1,0 +1,4 @@
+./quality/gsm8k_torch: accuracy 359/400 = 0.897, wall 888.1 s
+./quality/gsm8k_native: accuracy 362/400 = 0.905, wall 363.0 s
+0/60 corrupted at temperature=0.7
+0/30 corrupted at temperature=1.0
