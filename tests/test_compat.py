@@ -16,6 +16,7 @@ from transformers import AutoConfig
 from transformers.models.auto import configuration_auto
 
 import vllm_metal.compat as compat
+import vllm_metal.flint_compat as flint_compat
 
 
 @pytest.mark.parametrize("device", ["mps", "cuda", None])
@@ -343,6 +344,75 @@ class TestGemma4MTPConfigCompatPatch:
             "qwen3_flat_prefix",
             "minicpm4_model_type",
         ]
+
+
+def _write_flint_config(path) -> None:
+    layer_types = ["full_attention", "sliding_attention", "sliding_attention"]
+    (path / "config.json").write_text(
+        json.dumps(
+            {
+                "architectures": ["FlintForCausalLM"],
+                "model_type": "flint",
+                "num_hidden_layers": 3,
+                "layer_types": layer_types,
+                "no_rope_layer_indices": [0],
+                "sliding_window": 513,
+                "num_experts": 8,
+                "num_experts_per_tok": 2,
+            }
+        )
+    )
+
+
+class TestFlintCompat:
+    @pytest.fixture
+    def without_flint(self, monkeypatch):
+        """Hide any Flint registration in Transformers and vLLM."""
+        from vllm.model_executor.models import ModelRegistry
+
+        config_mapping = configuration_auto.CONFIG_MAPPING
+        monkeypatch.setattr(config_mapping, "_mapping", dict(config_mapping._mapping))
+        monkeypatch.setattr(
+            config_mapping, "_extra_content", dict(config_mapping._extra_content)
+        )
+        config_mapping._mapping.pop("flint", None)
+        config_mapping._extra_content.pop("flint", None)
+        monkeypatch.setattr(ModelRegistry, "models", dict(ModelRegistry.models))
+        ModelRegistry.models.pop("FlintForCausalLM", None)
+        return ModelRegistry
+
+    def test_flint_checkpoint_config_parses(self, without_flint, tmp_path) -> None:
+        with pytest.raises(ValueError, match="flint"):
+            AutoConfig.for_model("flint")
+
+        _write_flint_config(tmp_path)
+        flint_compat.register()
+        config = AutoConfig.from_pretrained(tmp_path)
+
+        assert config.model_type == "flint"
+        assert config.sliding_window == 513
+        assert config.layer_types[0] == "full_attention"
+        assert config.no_rope_layer_indices == [0]
+        assert config.num_experts == 8
+
+    def test_flint_architecture_is_registered(self, without_flint) -> None:
+        assert "FlintForCausalLM" not in without_flint.get_supported_archs()
+
+        flint_compat.register()
+
+        assert "FlintForCausalLM" in without_flint.get_supported_archs()
+
+    def test_existing_registrations_are_kept(self, without_flint) -> None:
+        sentinel_config = type("Sentinel", (), {"model_type": "flint"})
+        AutoConfig.register("flint", sentinel_config, exist_ok=True)
+        without_flint.register_model(
+            "FlintForCausalLM", "vllm.model_executor.models.llama:LlamaForCausalLM"
+        )
+
+        flint_compat.register()
+
+        assert configuration_auto.CONFIG_MAPPING["flint"] is sentinel_config
+        assert without_flint.models["FlintForCausalLM"].class_name == "LlamaForCausalLM"
 
 
 def _install_fake_qwen35_modules(monkeypatch, *, include_moe: bool):
