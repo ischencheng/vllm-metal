@@ -7,10 +7,12 @@ import torch
 from vllm.sampling_params import SamplingParams
 from vllm.v1.sample.ops.topk_topp_sampler import apply_top_k_top_p
 
-from vllm_metal.v1.sampling_batch import SamplingBatch
+from vllm_metal.v1.sampling_batch import TOP_K_CHUNK_SIZE, SamplingBatch
 
 VOCAB_SIZE = 512
 BATCH_SIZE = 4
+# Large enough that top-k up to 16 takes the chunked candidates.
+CHUNKED_VOCAB_SIZE = 64 * TOP_K_CHUNK_SIZE
 
 
 def _masked_in_vocab_order(
@@ -33,6 +35,47 @@ def _masked_in_vocab_order(
         sorted_desc,
         axis=-1,
     )
+
+
+def _sorted_probs(
+    logits: mx.array, top_k: list[int], top_p: list[float], min_p: list[float]
+) -> mx.array:
+    """Vocab-order probabilities of the full-sort candidates."""
+    sorted_desc, sorted_idx = SamplingBatch._sorted_candidate_logits(
+        logits, top_k, top_p, min_p
+    )
+    return mx.put_along_axis(
+        mx.zeros(logits.shape), sorted_idx, mx.softmax(sorted_desc, axis=-1), axis=-1
+    )
+
+
+def _chunked_probs(
+    logits: mx.array, top_k: list[int], top_p: list[float], min_p: list[float]
+) -> mx.array:
+    """Vocab-order probabilities of the chunked top-k candidates; the tied
+    group's mass is spread over its first ``tie_count`` tokens."""
+    assert SamplingBatch._uses_top_k_candidates(top_k, logits.shape[-1])
+    cand_logits, token_ids, tie_value, tie_count = SamplingBatch._top_k_candidates(
+        logits, top_k, top_p, min_p
+    )
+    probs = mx.softmax(cand_logits, axis=-1)
+    num_ids = token_ids.shape[-1]
+    out = mx.put_along_axis(
+        mx.zeros(logits.shape), token_ids, probs[:, :num_ids], axis=-1
+    )
+    is_tied = logits == tie_value
+    in_group = is_tied & (mx.cumsum(is_tied.astype(mx.int32), axis=-1) <= tie_count)
+    group_share = probs[:, num_ids:] / mx.maximum(tie_count, 1.0)
+    return out + mx.where(in_group, group_share, 0.0)
+
+
+def _spread_ties(value: float, stride: int) -> mx.array:
+    """One row of small logits with ``value`` at every ``stride``-th token, so
+    the tied tokens fall in many different chunks."""
+    logits = mx.random.uniform(
+        low=-1.0, high=0.0, shape=(1, CHUNKED_VOCAB_SIZE), key=mx.random.key(4)
+    )
+    return mx.where(mx.arange(CHUNKED_VOCAB_SIZE) % stride == 0, value, logits)
 
 
 def _random_params(**overrides) -> SamplingParams:
@@ -233,6 +276,95 @@ class TestTopKTopPMaskParity:
             i for i, v in enumerate(masked_ref.tolist()[0]) if v != float("-inf")
         }
         assert kept == kept_ref == {0, 1, 2, 3}
+
+
+class TestTopKCandidates:
+    @pytest.mark.parametrize(
+        ("top_k", "top_p", "min_p"),
+        [
+            ([16] * 4, [0.95] * 4, [0.0] * 4),
+            ([16, 8, 3, 1], [0.9, 1.0, 0.5, 1.0], [0.0, 0.05, 0.0, 0.0]),
+            ([5] * 4, [1.0] * 4, [0.1] * 4),
+        ],
+    )
+    def test_probabilities_match_the_full_sort(
+        self, top_k: list[int], top_p: list[float], min_p: list[float]
+    ) -> None:
+        logits = mx.random.normal((4, CHUNKED_VOCAB_SIZE), key=mx.random.key(17)) * 3
+        chunked = _chunked_probs(logits, top_k, top_p, min_p)
+        reference = _sorted_probs(logits, top_k, top_p, min_p)
+        mx.eval(chunked, reference)
+
+        assert mx.allclose(chunked, reference, atol=1e-6).item()
+
+    @pytest.mark.parametrize(("top_k", "top_p"), [(16, 1.0), (16, 0.9), (4, 0.5)])
+    def test_kept_tokens_match_vllm_reference(self, top_k: int, top_p: float) -> None:
+        logits = mx.random.normal((4, CHUNKED_VOCAB_SIZE), key=mx.random.key(42))
+        chunked = _chunked_probs(logits, [top_k] * 4, [top_p] * 4, [0.0] * 4)
+        mx.eval(chunked)
+        masked_ref = apply_top_k_top_p(
+            torch.tensor(logits.tolist()),
+            torch.full((4,), top_k),
+            None if top_p == 1.0 else torch.full((4,), top_p),
+        )
+
+        kept = [[p > 0.0 for p in row] for row in chunked.tolist()]
+        assert kept == (masked_ref != float("-inf")).tolist()
+
+    def test_kth_value_ties_outside_the_sorted_chunks_are_kept(self) -> None:
+        """Top-k keeps every token tied at the k-th value, including ties in
+        chunks whose maxima were not sorted. 41 tokens tie at the top, one
+        per 100 tokens, and ``top_k=2`` sorts only two chunks."""
+        logits = _spread_ties(3.0, stride=100)
+        chunked = _chunked_probs(logits, [2], [1.0], [0.0])
+        mx.eval(chunked)
+        masked_ref = apply_top_k_top_p(
+            torch.tensor(logits.tolist()), torch.tensor([2]), None
+        )
+
+        kept = {i for i, p in enumerate(chunked.tolist()[0]) if p > 0.0}
+        kept_ref = {
+            i for i, v in enumerate(masked_ref.tolist()[0]) if v != float("-inf")
+        }
+        assert kept == kept_ref == set(range(0, CHUNKED_VOCAB_SIZE, 100))
+        assert mx.allclose(chunked[0, ::100], mx.array(1 / 41)).item()
+
+    def test_top_p_through_kth_value_ties_keeps_the_sorted_count(self) -> None:
+        """When top-p cuts through the ties at the k-th value, as many tied
+        tokens survive as in the full sort and in vLLM."""
+        logits = _spread_ties(3.0, stride=100)
+        logits[0, 7] = 6.0
+        top_k, top_p = [3], [0.5]
+        chunked = _chunked_probs(logits, top_k, top_p, [0.0])
+        reference = _sorted_probs(logits, top_k, top_p, [0.0])
+        mx.eval(chunked, reference)
+        masked_ref = apply_top_k_top_p(
+            torch.tensor(logits.tolist()), torch.tensor(top_k), torch.tensor(top_p)
+        )
+
+        kept_count = sum(p > 0.0 for p in chunked.tolist()[0])
+        assert kept_count == int((masked_ref != float("-inf")).sum().item())
+        assert mx.allclose(
+            mx.sort(chunked, axis=-1), mx.sort(reference, axis=-1), atol=1e-6
+        ).item()
+
+    def test_tied_group_draws_cover_every_tied_token(self) -> None:
+        """A draw that lands on the tied group picks among all its tokens,
+        not just the ones in the sorted chunks."""
+        logits = mx.broadcast_to(
+            _spread_ties(3.0, stride=100), (64, CHUNKED_VOCAB_SIZE)
+        )
+        params = [_random_params(temperature=1.0, top_k=2, top_p=1.0)] * 64
+
+        drawn = set()
+        key = mx.random.key(8)
+        for _ in range(50):
+            key, subkey = mx.random.split(key)
+            tokens = SamplingBatch._native_random_tokens(logits, params, subkey)
+            mx.eval(tokens)
+            drawn.update(tokens.tolist())
+
+        assert drawn == set(range(0, CHUNKED_VOCAB_SIZE, 100))
 
 
 class TestMlxRandomTokens:
