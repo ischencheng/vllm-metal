@@ -1,0 +1,40 @@
+start 03:49:42 Now drawing from 'AC Power' swap: total = 8192.00M  used = 6998.00M  free = 1194.00M  (encrypted)
+checkout main 28cc4c7 03:49:42
+r1_main qwen_c1 Output token throughput (tok/s): 78.78  Median TPOT (ms): 11.43  
+r1_main qwen_c8 Output token throughput (tok/s): 221.43  Median TPOT (ms): 29.90  
+r1_main qwen_c16 Output token throughput (tok/s): 254.67  Median TPOT (ms): 54.08  
+r1_main greedy_c16 Output token throughput (tok/s): 275.25  Median TPOT (ms): 49.93  
+checkout perf/native-topk-chunked 162c24c 03:53:55
+r1_pr qwen_c1 Output token throughput (tok/s): 79.84  Median TPOT (ms): 11.25  
+r1_pr qwen_c8 Output token throughput (tok/s): 227.08  Median TPOT (ms): 29.07  
+r1_pr qwen_c16 Output token throughput (tok/s): 267.60  Median TPOT (ms): 51.36  
+r1_pr greedy_c16 Output token throughput (tok/s): 275.72  Median TPOT (ms): 49.88  
+r2_pr qwen_c1 Output token throughput (tok/s): 80.15  Median TPOT (ms): 11.21  
+r2_pr qwen_c8 Output token throughput (tok/s): 227.65  Median TPOT (ms): 28.96  
+r2_pr qwen_c16 Output token throughput (tok/s): 268.62  Median TPOT (ms): 51.11  
+r2_pr greedy_c16 Output token throughput (tok/s): 275.90  Median TPOT (ms): 49.78  
+checkout main 28cc4c7 04:02:19
+r2_main qwen_c1 Output token throughput (tok/s): 79.41  Median TPOT (ms): 11.30  
+r2_main qwen_c8 Output token throughput (tok/s): 222.43  Median TPOT (ms): 29.73  
+r2_main qwen_c16 Output token throughput (tok/s): 258.48  Median TPOT (ms): 53.42  
+r2_main greedy_c16 Output token throughput (tok/s): 275.98  Median TPOT (ms): 49.59  
+h1_main qwen_c4 Output token throughput (tok/s): 370.27  Median TPOT (ms): 9.58  
+h1_main qwen_c16 Output token throughput (tok/s): 592.77  Median TPOT (ms): 23.93  
+h1_main qwen_c32 Output token throughput (tok/s): 618.68  Median TPOT (ms): 48.07  
+h1_main greedy_c32 Output token throughput (tok/s): 942.29  Median TPOT (ms): 31.35  
+checkout perf/native-topk-chunked 162c24c 04:09:40
+h1_pr qwen_c4 Output token throughput (tok/s): 396.40  Median TPOT (ms): 8.81  
+h1_pr qwen_c16 Output token throughput (tok/s): 708.89  Median TPOT (ms): 19.70  
+h1_pr qwen_c32 Output token throughput (tok/s): 750.11  Median TPOT (ms): 39.20  
+h1_pr greedy_c32 Output token throughput (tok/s): 936.36  Median TPOT (ms): 31.51  
+h2_pr qwen_c4 Output token throughput (tok/s): 397.56  Median TPOT (ms): 8.84  
+h2_pr qwen_c16 Output token throughput (tok/s): 709.83  Median TPOT (ms): 19.67  
+h2_pr qwen_c32 Output token throughput (tok/s): 745.41  Median TPOT (ms): 39.60  
+h2_pr greedy_c32 Output token throughput (tok/s): 937.81  Median TPOT (ms): 31.43  
+checkout main 28cc4c7 04:15:30
+h2_main qwen_c4 Output token throughput (tok/s): 370.48  Median TPOT (ms): 9.53  
+h2_main qwen_c16 Output token throughput (tok/s): 595.00  Median TPOT (ms): 24.16  
+h2_main qwen_c32 Output token throughput (tok/s): 618.21  Median TPOT (ms): 48.11  
+h2_main greedy_c32 Output token throughput (tok/s): 938.28  Median TPOT (ms): 31.15  
+checkout perf/native-topk-chunked 162c24c 04:18:38
+end 04:18:38 Now drawing from 'AC Power' swap: total = 19456.00M  used = 17731.00M  free = 1725.00M  (encrypted)

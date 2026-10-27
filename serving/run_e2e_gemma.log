@@ -1,0 +1,22 @@
+start 04:43:45 Now drawing from 'AC Power' swap: total = 18432.00M  used = 17261.25M  free = 1170.75M  (encrypted)
+checkout main 28cc4c7 04:43:45
+g1_main gemma_c1 Output token throughput (tok/s): 117.13  Median TPOT (ms): 8.18  
+g1_main gemma_c8 Output token throughput (tok/s): 365.31  Median TPOT (ms): 20.32  
+g1_main gemma_c16 Output token throughput (tok/s): 385.10  Median TPOT (ms): 39.44  
+g1_main greedy_c16 Output token throughput (tok/s): 465.90  Median TPOT (ms): 32.52  
+checkout perf/native-topk-chunked 162c24c 04:47:08
+g1_pr gemma_c1 Output token throughput (tok/s): 120.12  Median TPOT (ms): 7.96  
+g1_pr gemma_c8 Output token throughput (tok/s): 401.11  Median TPOT (ms): 18.36  
+g1_pr gemma_c16 Output token throughput (tok/s): 433.18  Median TPOT (ms): 34.82  
+g1_pr greedy_c16 Output token throughput (tok/s): 465.93  Median TPOT (ms): 32.48  
+g2_pr gemma_c1 Output token throughput (tok/s): 119.41  Median TPOT (ms): 7.99  
+g2_pr gemma_c8 Output token throughput (tok/s): 399.54  Median TPOT (ms): 18.45  
+g2_pr gemma_c16 Output token throughput (tok/s): 431.46  Median TPOT (ms): 34.89  
+g2_pr greedy_c16 Output token throughput (tok/s): 465.02  Median TPOT (ms): 32.64  
+checkout main 28cc4c7 04:53:41
+g2_main gemma_c1 Output token throughput (tok/s): 116.39  Median TPOT (ms): 8.22  
+g2_main gemma_c8 Output token throughput (tok/s): 364.22  Median TPOT (ms): 20.37  
+g2_main gemma_c16 Output token throughput (tok/s): 384.71  Median TPOT (ms): 39.42  
+g2_main greedy_c16 Output token throughput (tok/s): 464.47  Median TPOT (ms): 32.74  
+checkout perf/native-topk-chunked 162c24c 04:57:05
+end 04:57:05 Now drawing from 'AC Power' swap: total = 20480.00M  used = 19244.50M  free = 1235.50M  (encrypted)

@@ -1,0 +1,6 @@
+All checks passed!
+452 files already formatted
+Success: no issues found in 184 source files
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5958 passed, 15 skipped, 299 deselected, 16 warnings in 93.39s (0:01:33)

@@ -1,0 +1,22 @@
+{"mlx": "0.32.4", "device": "applegpu_g17s", "macos": "26.4.1"}
+qwen3_default  B=  1 sort 0.500 [0.486,0.522]  chunked 0.440 [0.427,0.462]  greedy 0.188
+qwen3_default  B=  2 sort 0.560 [0.547,0.604]  chunked 0.441 [0.425,0.461]  greedy 0.190
+qwen3_default  B=  4 sort 0.890 [0.838,0.961]  chunked 0.490 [0.454,0.509]  greedy 0.194
+qwen3_default  B=  8 sort 1.437 [1.386,1.490]  chunked 0.518 [0.503,0.532]  greedy 0.191
+qwen3_default  B= 16 sort 3.100 [3.043,3.160]  chunked 0.678 [0.665,0.698]  greedy 0.192
+qwen3_default  B= 32 sort 6.729 [6.671,6.838]  chunked 1.161 [1.137,1.237]  greedy 0.223
+qwen3_default  B= 64 sort 13.511 [13.423,13.675]  chunked 2.382 [2.321,2.501]  greedy 0.251
+gemma_default  B=  1 sort 0.658 [0.636,0.720]  chunked 0.503 [0.485,0.538]  greedy 0.223
+gemma_default  B=  2 sort 0.842 [0.822,0.924]  chunked 0.513 [0.495,0.544]  greedy 0.231
+gemma_default  B=  4 sort 1.356 [1.319,1.446]  chunked 0.576 [0.552,0.634]  greedy 0.221
+gemma_default  B=  8 sort 2.611 [2.558,2.695]  chunked 0.699 [0.680,0.745]  greedy 0.230
+gemma_default  B= 16 sort 5.757 [5.700,5.840]  chunked 1.035 [1.018,1.126]  greedy 0.231
+gemma_default  B= 32 sort 12.210 [12.134,12.332]  chunked 2.053 [1.997,2.116]  greedy 0.236
+gemma_default  B= 64 sort 24.238 [24.146,24.455]  chunked 3.892 [3.847,3.999]  greedy 0.316
+qwen3_minp     B=  1 sort 0.533 [0.521,0.600]  chunked 0.439 [0.429,0.465]  greedy 0.193
+qwen3_minp     B=  2 sort 0.620 [0.600,0.654]  chunked 0.472 [0.452,0.505]  greedy 0.195
+qwen3_minp     B=  4 sort 0.941 [0.912,1.005]  chunked 0.499 [0.482,0.538]  greedy 0.198
+qwen3_minp     B=  8 sort 1.593 [1.553,1.652]  chunked 0.548 [0.530,0.575]  greedy 0.195
+qwen3_minp     B= 16 sort 3.353 [3.263,3.504]  chunked 0.719 [0.697,0.757]  greedy 0.192
+qwen3_minp     B= 32 sort 7.075 [7.029,7.205]  chunked 1.167 [1.148,1.264]  greedy 0.234
+qwen3_minp     B= 64 sort 14.327 [14.247,14.456]  chunked 2.374 [2.330,2.428]  greedy 0.250
