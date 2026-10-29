@@ -25,6 +25,8 @@ GREEDY_TEMPERATURE_EPS = 1e-5
 _EMPTY_LOGITSPROCS = LogitsProcessors()
 # Logits per chunk when native top-k picks candidates by chunk maxima.
 TOP_K_CHUNK_SIZE = 64
+# Logits per chunk in the two-level native categorical draw.
+DRAW_CHUNK_SIZE = 64
 
 
 @dataclass(frozen=True)
@@ -273,7 +275,8 @@ class SamplingBatch:
         logits: top-k masks by value, so a row whose k-th largest logit is
         tied keeps every token sharing that value, and a candidate set cut to
         ``max(top_k)`` would drop the ones past it. Batches where every row
-        has a small top-k use :meth:`_top_k_candidates` instead.
+        has a small top-k use :meth:`_top_k_candidates` instead, and batches
+        without top-k or top-p use :meth:`_unranked_tokens`.
         """
         vocab_size = int(scaled_logits.shape[-1])
         effective_k = [k if 0 < k < vocab_size else vocab_size for k in top_k]
@@ -416,6 +419,21 @@ class SamplingBatch:
         tied = mx.argmax(is_tied & (tie_rank == pick + 1), axis=-1)
         return mx.where(position == num_candidates, tied, candidate)
 
+    @staticmethod
+    def _unranked_tokens(
+        scaled_logits: mx.array, min_p: Sequence[float], key: mx.array
+    ) -> mx.array:
+        """Draw for rows without top-k or top-p, which need no ranking: min-p
+        masks by value against the row maximum, as the chunked top-k path
+        does."""
+        logits = scaled_logits
+        if any(p > 0.0 for p in min_p):
+            min_p_col = mx.array(min_p, dtype=mx.float32)[:, None]
+            row_max = scaled_logits.max(axis=-1, keepdims=True)
+            keep = mx.exp(scaled_logits - row_max) >= min_p_col
+            logits = mx.where(keep, scaled_logits, -mx.inf)
+        return chunked_categorical(logits, key)
+
     @classmethod
     def _native_random_tokens(
         cls,
@@ -453,13 +471,20 @@ class SamplingBatch:
             logits_2d.astype(mx.float32)
             / mx.array(temperatures, dtype=mx.float32)[:, None]
         )
-        if cls._uses_top_k_candidates(top_k, int(scaled.shape[-1])):
+        vocab_size = int(scaled.shape[-1])
+        if not any(
+            not greedy and (0 < k < vocab_size or p < 1.0)
+            for greedy, k, p in zip(greedy_rows, top_k, top_p, strict=True)
+        ):
+            # Greedy rows' top-1 mask is moot: their draw is replaced below.
+            tokens = cls._unranked_tokens(scaled, min_p, key)
+        elif cls._uses_top_k_candidates(top_k, vocab_size):
             tokens = cls._top_k_candidate_tokens(scaled, top_k, top_p, min_p, key)
         else:
             sorted_desc, sorted_idx = cls._sorted_candidate_logits(
                 scaled, top_k, top_p, min_p
             )
-            position = mx.random.categorical(sorted_desc, axis=-1, key=key)
+            position = chunked_categorical(sorted_desc, key)
             tokens = mx.take_along_axis(sorted_idx, position[:, None], axis=-1)[:, 0]
         if any(greedy_rows):
             tokens = mx.where(
@@ -747,6 +772,28 @@ def mlx_greedy_tokens(logits_2d: mx.array) -> mx.array:
     pipeline submit the argmax asynchronously and defer the sync one step.
     """
     return mx.argmax(logits_2d, axis=-1)
+
+
+def chunked_categorical(logits_2d: mx.array, key: mx.array) -> mx.array:
+    """Lazy categorical draw per row, as ``mx.random.categorical``.
+
+    Draws a chunk of ``DRAW_CHUNK_SIZE`` logits by its logsumexp, then a token
+    within that chunk: P(chunk) * P(token | chunk) is the token's softmax
+    probability. The Gumbel noise covers one chunk score per chunk plus one
+    chunk's logits instead of the whole vocabulary, which is most of the cost
+    of a full-width draw. Chunks that are entirely ``-inf`` are never drawn.
+    """
+    num_rows, vocab_size = logits_2d.shape
+    num_chunks = -(-vocab_size // DRAW_CHUNK_SIZE)
+    padding = num_chunks * DRAW_CHUNK_SIZE - vocab_size
+    if padding:
+        logits_2d = mx.pad(logits_2d, [(0, 0), (0, padding)], constant_values=-mx.inf)
+    chunks = logits_2d.reshape(num_rows, num_chunks, DRAW_CHUNK_SIZE)
+    chunk_key, token_key = mx.random.split(key)
+    chunk = mx.random.categorical(mx.logsumexp(chunks, axis=-1), axis=-1, key=chunk_key)
+    chunk_logits = mx.take_along_axis(chunks, chunk[:, None, None], axis=1)[:, 0]
+    offset = mx.random.categorical(chunk_logits, axis=-1, key=token_key)
+    return chunk * DRAW_CHUNK_SIZE + offset
 
 
 def sample_from_logits(

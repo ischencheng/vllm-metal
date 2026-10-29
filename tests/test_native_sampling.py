@@ -7,7 +7,11 @@ import torch
 from vllm.sampling_params import SamplingParams
 from vllm.v1.sample.ops.topk_topp_sampler import apply_top_k_top_p
 
-from vllm_metal.v1.sampling_batch import TOP_K_CHUNK_SIZE, SamplingBatch
+from vllm_metal.v1.sampling_batch import (
+    TOP_K_CHUNK_SIZE,
+    SamplingBatch,
+    chunked_categorical,
+)
 
 VOCAB_SIZE = 512
 BATCH_SIZE = 4
@@ -367,7 +371,90 @@ class TestTopKCandidates:
         assert drawn == set(range(0, CHUNKED_VOCAB_SIZE, 100))
 
 
+def _draw_frequencies(
+    logits: mx.array, params: SamplingParams, draws: int, seed: int
+) -> mx.array:
+    """Empirical token frequencies of ``draws`` native draws of one row."""
+    rows = 512
+    batch = mx.broadcast_to(logits, (rows, logits.shape[-1]))
+    counts = mx.zeros((logits.shape[-1],), dtype=mx.int32)
+    key = mx.random.key(seed)
+    for _ in range(draws // rows):
+        key, subkey = mx.random.split(key)
+        tokens = SamplingBatch._native_random_tokens(batch, [params] * rows, subkey)
+        counts = counts.at[tokens].add(1)
+    return counts.astype(mx.float32) / (draws // rows * rows)
+
+
+class TestChunkedCategorical:
+    def test_never_draws_masked_tokens(self) -> None:
+        """Masked tokens, whole masked chunks and the padding of a vocab that
+        is not a multiple of the chunk size are never drawn."""
+        vocab_size = 200
+        allowed = [3, 64, 65, 199]
+        logits = mx.full((256, vocab_size), -mx.inf)
+        logits[:, allowed] = mx.array([0.0, 1.0, -2.0, 0.5])
+
+        drawn = set()
+        key = mx.random.key(2)
+        for _ in range(20):
+            key, subkey = mx.random.split(key)
+            tokens = chunked_categorical(logits, subkey)
+            mx.eval(tokens)
+            drawn.update(tokens.tolist())
+
+        assert drawn == set(allowed)
+
+    @pytest.mark.parametrize(
+        "params",
+        [
+            _random_params(temperature=0.8, top_k=0, top_p=1.0),
+            _random_params(temperature=1.0, top_k=0, top_p=1.0, min_p=0.05),
+            _random_params(temperature=1.5, top_k=0, top_p=0.95),
+        ],
+        ids=["temperature", "min_p", "top_p"],
+    )
+    def test_draws_follow_the_candidate_distribution(
+        self, params: SamplingParams
+    ) -> None:
+        """Draws match the softmax over the full-sort candidates, for batches
+        that skip the sort and for top-p batches that keep it."""
+        vocab_size = 200
+        logits = mx.random.normal((1, vocab_size), key=mx.random.key(9)) * 2
+        expected = _sorted_probs(
+            logits / params.temperature, [0], [params.top_p], [params.min_p]
+        )[0]
+
+        observed = _draw_frequencies(logits, params, draws=81_920, seed=13)
+
+        total_variation = 0.5 * mx.abs(observed - expected).sum().item()
+        assert total_variation < 0.03
+        assert mx.all(mx.where(expected == 0.0, observed == 0.0, True)).item()
+
+
 class TestMlxRandomTokens:
+    def test_greedy_row_in_temperature_only_batch_stays_on_the_argmax(
+        self,
+    ) -> None:
+        logits = mx.array([[1.0, 5.0, 5.0, 0.0], [1.0, 2.0, 3.0, 4.0]])
+        params = [
+            _random_params(temperature=0.0),
+            _random_params(temperature=1.0, top_k=0, top_p=1.0),
+        ]
+        expected = int(mx.argmax(logits[0]).item())
+
+        greedy_row, other_row = set(), set()
+        for seed in range(50):
+            tokens = SamplingBatch._native_random_tokens(
+                logits, params, mx.random.key(seed)
+            )
+            mx.eval(tokens)
+            greedy_row.add(int(tokens.tolist()[0]))
+            other_row.add(int(tokens.tolist()[1]))
+
+        assert greedy_row == {expected}
+        assert len(other_row) > 1
+
     def test_greedy_row_with_tied_maximum_stays_on_the_argmax(self) -> None:
         """A greedy row must resolve to the argmax even when the top logits
         tie. Masking it by value keeps every tied token, and the categorical
