@@ -1,0 +1,6 @@
+real 0.0 1.0 0.0072 support_ok True
+real 0.05 1.0 0.0047 support_ok True
+real 0.0 0.95 0.0116 support_ok True
+mutant 0.0 1.0 0.1472 support_ok True
+mutant 0.05 1.0 0.1156 support_ok True
+mutant 0.0 0.95 0.0756 support_ok True

@@ -1,0 +1,3 @@
+B=1 {'argmax': '0.328', 'uniform': '0.272', 'gumbel': '0.305', 'categorical': '0.556', 'argsort': '0.784', 'main_temp_only': '1.167'}
+B=16 {'argmax': '0.259', 'uniform': '0.540', 'gumbel': '0.627', 'categorical': '0.685', 'argsort': '1.705', 'main_temp_only': '2.503'}
+B=64 {'argmax': '0.312', 'uniform': '1.739', 'gumbel': '2.898', 'categorical': '3.501', 'argsort': '6.558', 'main_temp_only': '11.500'}

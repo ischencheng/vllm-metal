@@ -1,0 +1,7 @@
+All checks passed!
+452 files already formatted
+Success: no issues found in 184 source files
+    warnings.warn(NumbaPendingDeprecationWarning(msg, loc=loc))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5963 passed, 15 skipped, 299 deselected, 16 warnings in 92.92s (0:01:32)

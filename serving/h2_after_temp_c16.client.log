@@ -1,0 +1,48 @@
+objc[65999]: Class AVFFrameReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x12076c328) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x1410743a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[65999]: Class AVFAudioReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x12076c378) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x1410743f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+W1029 04:24:03.714000 65999 torch/_library/triton.py:53] Triton not available, find_triton_kernels = []
+Namespace(subparser='bench', bench_type='serve', dispatch_function=<function BenchmarkServingSubcommand.cmd at 0x151659bc0>, trust_remote_code=False, seed=713, num_prompts=64, dataset_name='random', no_stream=False, dataset_path=None, no_oversample=False, skip_chat_template=False, enable_multimodal_chat=False, disable_shuffle=False, custom_output_len=256, custom_ensure_client_side_data=False, spec_bench_output_len=256, spec_bench_category=None, sharegpt_output_len=None, timed_trace_chunk_hash_size=16, timed_trace_sec_multiplier=1, timed_trace_label_timestamp='timestamp', timed_trace_label_input_length='input_length', timed_trace_label_output_length='output_length', timed_trace_label_hash_ids='hash_ids', blazedit_min_distance=0.0, blazedit_max_distance=1.0, asr_max_audio_len_sec=inf, asr_min_audio_len_sec=0.0, random_input_len=1024, random_output_len=256, random_range_ratio='0', random_prefix_len=0, random_batch_size=1, no_reranker=False, random_mm_base_items_per_request=1, random_mm_num_mm_items_range_ratio=0.0, random_mm_limit_mm_per_prompt={'image': 255, 'video': 1}, random_mm_bucket_config={(256, 256, 1): 0.5, (720, 1280, 1): 0.5, (720, 1280, 16): 0.0}, hf_subset=None, hf_split=None, hf_name=None, hf_output_len=None, bfcl_categories=None, prefix_repetition_prefix_len=256, prefix_repetition_suffix_len=256, prefix_repetition_num_prefixes=10, prefix_repetition_output_len=128, speed_bench_dataset_subset='qualitative', speed_bench_output_len=4096, speed_bench_category=None, label=None, backend='openai', base_url='http://127.0.0.1:8047', host='127.0.0.1', port=8000, endpoint='/v1/completions', header=None, max_concurrency=16, model='HF_CACHE/Qwen/Qwen3.5-0.8B', input_len=None, output_len=None, tokenizer=None, tokenizer_mode='auto', use_beam_search=False, logprobs=None, request_rate=inf, burstiness=1.0, probe_request_rate=0.0, disable_tqdm=False, num_warmups=2, profile=False, save_result=True, save_detailed=False, append_result=False, metadata=None, result_dir='EVIDENCE_DIR/bench', result_filename='h2_after_temp_c16.json', ignore_eos=True, self_timed=None, percentile_metrics='ttft,tpot,e2el', metric_percentiles='50,95,99', goodput=None, request_id_prefix='bench-c2f3ed00-', top_p=None, top_k=None, min_p=None, temperature=1.0, frequency_penalty=None, presence_penalty=None, repetition_penalty=None, served_model_name='bench', lora_modules=None, lora_assignment='random', ramp_up_strategy=None, ramp_up_start_rps=None, ramp_up_end_rps=None, ready_check_timeout_sec=0, chat_template_kwargs=None, extra_body=None, skip_tokenizer_init=False, insecure=False, plot_timeline=False, timeline_itl_thresholds='25,50', plot_dataset_stats=False, log_config_file=None, logging_config=LoggingConfig(log_level='INFO', formatter='text', configure_logging=True, pylogging_config_file=None))
+(MainProcess pid=65999) INFO 10-29 04:24:04 [utils.py:88] Sampling input_len from [1024, 1024] and output_len from [256, 256]
+WARNING: /tokenize unavailable, skipping alignment.
+Starting initial single prompt test run...
+Skipping endpoint ready check.
+Warming up with 2 requests...
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:02<00:02,  2.88s/it]100%|██████████| 2/2 [00:02<00:00,  1.44s/it]
+Warmup run completed.
+Starting main benchmark run...
+Traffic request rate: inf
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: 16
+  0%|          | 0/64 [00:00<?, ?it/s]  2%|▏         | 1/64 [00:05<05:27,  5.20s/it]  5%|▍         | 3/64 [00:05<01:25,  1.41s/it]  8%|▊         | 5/64 [00:05<00:42,  1.39it/s] 11%|█         | 7/64 [00:05<00:26,  2.17it/s] 14%|█▍        | 9/64 [00:05<00:17,  3.08it/s] 17%|█▋        | 11/64 [00:06<00:12,  4.08it/s] 20%|██        | 13/64 [00:06<00:09,  5.12it/s] 23%|██▎       | 15/64 [00:06<00:08,  6.12it/s] 27%|██▋       | 17/64 [00:10<00:35,  1.33it/s] 30%|██▉       | 19/64 [00:10<00:24,  1.85it/s] 31%|███▏      | 20/64 [00:10<00:20,  2.14it/s] 34%|███▍      | 22/64 [00:10<00:13,  3.03it/s] 38%|███▊      | 24/64 [00:11<00:10,  3.85it/s] 41%|████      | 26/64 [00:11<00:08,  4.75it/s] 44%|████▍     | 28/64 [00:11<00:06,  5.66it/s] 47%|████▋     | 30/64 [00:11<00:05,  6.56it/s] 50%|█████     | 32/64 [00:12<00:04,  7.36it/s] 52%|█████▏    | 33/64 [00:15<00:25,  1.21it/s] 55%|█████▍    | 35/64 [00:16<00:16,  1.75it/s] 56%|█████▋    | 36/64 [00:16<00:13,  2.06it/s] 58%|█████▊    | 37/64 [00:16<00:11,  2.45it/s] 61%|██████    | 39/64 [00:16<00:07,  3.57it/s] 64%|██████▍   | 41/64 [00:16<00:05,  3.92it/s] 67%|██████▋   | 43/64 [00:17<00:04,  4.96it/s] 70%|███████   | 45/64 [00:17<00:03,  5.97it/s] 73%|███████▎  | 47/64 [00:17<00:02,  6.90it/s] 77%|███████▋  | 49/64 [00:21<00:10,  1.37it/s] 88%|████████▊ | 56/64 [00:21<00:02,  3.38it/s]100%|██████████| 64/64 [00:21<00:00,  2.94it/s]
+tip: install termplotlib and gnuplot to plot the metrics
+============ Serving Benchmark Result ============
+Successful requests:                     64        
+Failed requests:                         0         
+Maximum request concurrency:             16        
+Benchmark duration (s):                  21.73     
+Total input tokens:                      65536     
+Total generated tokens:                  16384     
+Request throughput (req/s):              2.95      
+Output token throughput (tok/s):         753.93    
+Peak output token throughput (tok/s):    1120.00   
+Peak concurrent requests:                26.00     
+Total token throughput (tok/s):          3769.63   
+---------------Time to First Token----------------
+Mean TTFT (ms):                          726.46    
+Median TTFT (ms):                        636.23    
+P50 TTFT (ms):                           636.23    
+P95 TTFT (ms):                           1509.38   
+P99 TTFT (ms):                           1552.98   
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          18.41     
+Median TPOT (ms):                        18.58     
+P50 TPOT (ms):                           18.58     
+P95 TPOT (ms):                           20.27     
+P99 TPOT (ms):                           20.61     
+----------------End-to-end Latency----------------
+Mean E2EL (ms):                          5421.07   
+Median E2EL (ms):                        5449.40   
+P50 E2EL (ms):                           5449.40   
+P95 E2EL (ms):                           6270.88   
+P99 E2EL (ms):                           6491.69   
+==================================================

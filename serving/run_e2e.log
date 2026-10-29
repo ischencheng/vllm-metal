@@ -1,0 +1,48 @@
+start 03:49:54 Now drawing from 'AC Power' swap: total = 17408.00M  used = 16343.50M  free = 1064.50M  (encrypted)
+checkout perf/native-topk-chunked 162c24c 03:49:54
+r1_before temp_c1 Output token throughput (tok/s): 77.52  Median TPOT (ms): 11.63  
+r1_before temp_c8 Output token throughput (tok/s): 219.59  Median TPOT (ms): 30.37  
+r1_before temp_c16 Output token throughput (tok/s): 255.17  Median TPOT (ms): 54.71  
+r1_before topp_c16 Output token throughput (tok/s): 253.50  Median TPOT (ms): 54.52  
+r1_before minp_c16 Output token throughput (tok/s): 256.94  Median TPOT (ms): 53.69  
+r1_before greedy_c16 Output token throughput (tok/s): 270.87  Median TPOT (ms): 50.80  
+checkout perf/native-sampling-no-sort 05d9092 03:56:44
+r1_after temp_c1 Output token throughput (tok/s): 78.14  Median TPOT (ms): 11.63  
+r1_after temp_c8 Output token throughput (tok/s): 226.58  Median TPOT (ms): 29.53  
+r1_after temp_c16 Output token throughput (tok/s): 272.72  Median TPOT (ms): 50.27  
+r1_after topp_c16 Output token throughput (tok/s): 260.97  Median TPOT (ms): 52.74  
+r1_after minp_c16 Output token throughput (tok/s): 271.34  Median TPOT (ms): 50.54  
+r1_after greedy_c16 Output token throughput (tok/s): 275.69  Median TPOT (ms): 49.72  
+r2_after temp_c1 Output token throughput (tok/s): 80.53  Median TPOT (ms): 11.18  
+r2_after temp_c8 Output token throughput (tok/s): 230.19  Median TPOT (ms): 28.65  
+r2_after temp_c16 Output token throughput (tok/s): 272.62  Median TPOT (ms): 50.31  
+r2_after topp_c16 Output token throughput (tok/s): 260.88  Median TPOT (ms): 52.77  
+r2_after minp_c16 Output token throughput (tok/s): 271.50  Median TPOT (ms): 50.52  
+r2_after greedy_c16 Output token throughput (tok/s): 275.89  Median TPOT (ms): 49.73  
+checkout perf/native-topk-chunked 162c24c 04:09:46
+r2_before temp_c1 Output token throughput (tok/s): 79.19  Median TPOT (ms): 11.34  
+r2_before temp_c8 Output token throughput (tok/s): 224.82  Median TPOT (ms): 29.49  
+r2_before temp_c16 Output token throughput (tok/s): 262.77  Median TPOT (ms): 52.59  
+r2_before topp_c16 Output token throughput (tok/s): 258.47  Median TPOT (ms): 53.38  
+r2_before minp_c16 Output token throughput (tok/s): 261.77  Median TPOT (ms): 52.65  
+r2_before greedy_c16 Output token throughput (tok/s): 275.45  Median TPOT (ms): 49.74  
+h1_before temp_c16 Output token throughput (tok/s): 641.80  Median TPOT (ms): 22.39  
+h1_before temp_c32 Output token throughput (tok/s): 682.48  Median TPOT (ms): 43.91  
+h1_before topp_c32 Output token throughput (tok/s): 615.51  Median TPOT (ms): 48.21  
+h1_before greedy_c32 Output token throughput (tok/s): 929.14  Median TPOT (ms): 31.68  
+checkout perf/native-sampling-no-sort 05d9092 04:20:08
+h1_after temp_c16 Output token throughput (tok/s): 759.78  Median TPOT (ms): 18.59  
+h1_after temp_c32 Output token throughput (tok/s): 817.27  Median TPOT (ms): 36.22  
+h1_after topp_c32 Output token throughput (tok/s): 647.01  Median TPOT (ms): 45.99  
+h1_after greedy_c32 Output token throughput (tok/s): 920.87  Median TPOT (ms): 31.89  
+h2_after temp_c16 Output token throughput (tok/s): 753.93  Median TPOT (ms): 18.58  
+h2_after temp_c32 Output token throughput (tok/s): 835.32  Median TPOT (ms): 35.15  
+h2_after topp_c32 Output token throughput (tok/s): 644.97  Median TPOT (ms): 46.21  
+h2_after greedy_c32 Output token throughput (tok/s): 924.27  Median TPOT (ms): 31.77  
+checkout perf/native-topk-chunked 162c24c 04:27:05
+h2_before temp_c16 Output token throughput (tok/s): 633.86  Median TPOT (ms): 22.78  
+h2_before temp_c32 Output token throughput (tok/s): 684.80  Median TPOT (ms): 43.66  
+h2_before topp_c32 Output token throughput (tok/s): 616.92  Median TPOT (ms): 48.45  
+h2_before greedy_c32 Output token throughput (tok/s): 924.93  Median TPOT (ms): 31.90  
+checkout perf/native-sampling-no-sort 05d9092 04:30:48
+end 04:30:48 Now drawing from 'AC Power' swap: total = 18432.00M  used = 17491.12M  free = 940.88M  (encrypted)

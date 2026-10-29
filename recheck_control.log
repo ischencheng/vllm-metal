@@ -1,0 +1,7 @@
+t0.6_k20_p0.95 candidate probs vs exact: max abs diff 1.3876599175288717e-07 top target [(0.69706, 12095), (0.30294, 304)]
+t0.6_k20_p0.95 p0 seed1 N=100000 TV=0.0011 chi2 p=0.437 masked=0
+t0.6_k20_p0.95 p0 seed2 N=100000 TV=0.0020 chi2 p=0.177 masked=0
+t0.6_k20_p0.95 p0 seed3 N=100000 TV=0.0001 chi2 p=0.967 masked=0
+t0.7 p4 seed1 N=100000 TV=0.0003 chi2 p=0.727 masked=0
+t0.7 p4 seed2 N=100000 TV=0.0002 chi2 p=0.794 masked=0
+t0.7 p4 seed3 N=100000 TV=0.0008 chi2 p=0.408 masked=0

@@ -1,0 +1,6 @@
+temp_c1 1 8 --temperature 1.0
+temp_c8 8 32 --temperature 1.0
+temp_c16 16 64 --temperature 1.0
+topp_c16 16 64 --temperature 0.6 --top-p 0.9
+minp_c16 16 64 --temperature 0.7 --min-p 0.05
+greedy_c16 16 64 --temperature 0

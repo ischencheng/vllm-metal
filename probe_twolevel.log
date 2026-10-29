@@ -1,0 +1,10 @@
+V=151936 B=1 greedy=0.320 T:main=0.586 T:cat=0.322 T:2lvl64=0.321 T:2lvl256=0.342 T:2lvl512=0.337 P:main=0.840 P:sort+2lvl256=0.756
+V=151936 B=8 greedy=0.181 T:main=1.154 T:cat=0.389 T:2lvl64=0.261 T:2lvl256=0.279 T:2lvl512=0.273 P:main=1.335 P:sort+2lvl256=1.176
+V=151936 B=16 greedy=0.186 T:main=2.530 T:cat=0.664 T:2lvl64=0.277 T:2lvl256=0.337 T:2lvl512=0.342 P:main=2.952 P:sort+2lvl256=2.518
+V=151936 B=32 greedy=0.216 T:main=5.128 T:cat=1.231 T:2lvl64=0.326 T:2lvl256=0.501 T:2lvl512=0.503 P:main=6.329 P:sort+2lvl256=4.969
+V=151936 B=64 greedy=0.324 T:main=11.041 T:cat=3.699 T:2lvl64=0.485 T:2lvl256=0.979 T:2lvl512=1.038 P:main=13.164 P:sort+2lvl256=9.945
+V=128256 B=1 greedy=0.172 T:main=0.373 T:cat=0.255 T:2lvl64=0.286 T:2lvl256=0.289 T:2lvl512=0.298 P:main=0.438 P:sort+2lvl256=0.451
+V=128256 B=8 greedy=0.174 T:main=0.938 T:cat=0.308 T:2lvl64=0.258 T:2lvl256=0.259 T:2lvl512=0.265 P:main=1.103 P:sort+2lvl256=1.001
+V=128256 B=16 greedy=0.173 T:main=1.945 T:cat=0.574 T:2lvl64=0.262 T:2lvl256=0.257 T:2lvl512=0.314 P:main=2.286 P:sort+2lvl256=1.869
+V=128256 B=32 greedy=0.199 T:main=4.245 T:cat=1.047 T:2lvl64=0.318 T:2lvl256=0.277 T:2lvl512=0.417 P:main=5.129 P:sort+2lvl256=3.928
+V=128256 B=64 greedy=0.293 T:main=9.275 T:cat=2.880 T:2lvl64=0.388 T:2lvl256=0.361 T:2lvl512=0.743 P:main=10.142 P:sort+2lvl256=7.559
