@@ -101,7 +101,8 @@ metal = "vllm_metal:register"
 # subprocesses; GGUF loading stays lazy for other model formats.
 [project.entry-points."vllm.general_plugins"]
 gguf_metal = "vllm_metal.gguf.vllm_integration:register"
-flint_metal = "vllm_metal.flint_compat:register"
+# Scheduler/cache metadata for MLX architectures missing from the pinned vLLM.
+metal_model_metadata = "vllm_metal.compat:register_model_compat"
 
 [tool.setuptools]
 include-package-data = false

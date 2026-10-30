@@ -16,7 +16,6 @@ from transformers import AutoConfig
 from transformers.models.auto import configuration_auto
 
 import vllm_metal.compat as compat
-import vllm_metal.flint_compat as flint_compat
 
 
 @pytest.mark.parametrize("device", ["mps", "cuda", None])
@@ -365,6 +364,15 @@ def _write_flint_config(path) -> None:
 
 
 class TestFlintCompat:
+    @pytest.fixture(autouse=True)
+    def metal_mlx(self, monkeypatch):
+        import vllm.platforms as platforms
+
+        from vllm_metal.platform import MetalPlatform
+
+        monkeypatch.delenv("VLLM_METAL_BACKEND", raising=False)
+        monkeypatch.setattr(platforms, "current_platform", MetalPlatform())
+
     @pytest.fixture
     def without_flint(self, monkeypatch):
         """Hide any Flint registration in Transformers and vLLM."""
@@ -386,7 +394,7 @@ class TestFlintCompat:
             AutoConfig.for_model("flint")
 
         _write_flint_config(tmp_path)
-        flint_compat.register()
+        compat.register_model_compat()
         config = AutoConfig.from_pretrained(tmp_path)
 
         assert config.model_type == "flint"
@@ -398,7 +406,8 @@ class TestFlintCompat:
     def test_flint_architecture_is_registered(self, without_flint) -> None:
         assert "FlintForCausalLM" not in without_flint.get_supported_archs()
 
-        flint_compat.register()
+        compat.register_model_compat()
+        compat.register_model_compat()
 
         assert "FlintForCausalLM" in without_flint.get_supported_archs()
 
@@ -409,10 +418,30 @@ class TestFlintCompat:
             "FlintForCausalLM", "vllm.model_executor.models.llama:LlamaForCausalLM"
         )
 
-        flint_compat.register()
+        compat.register_model_compat()
 
         assert configuration_auto.CONFIG_MAPPING["flint"] is sentinel_config
         assert without_flint.models["FlintForCausalLM"].class_name == "LlamaForCausalLM"
+
+    @pytest.mark.parametrize(
+        ("is_metal", "backend"),
+        [(False, "mlx"), (True, "mps"), (False, "mps")],
+    )
+    def test_other_platforms_and_backends_keep_flint_unregistered(
+        self, without_flint, monkeypatch, is_metal, backend
+    ) -> None:
+        import vllm.platforms as platforms
+        from vllm.platforms.cpu import CpuPlatform
+
+        monkeypatch.setenv("VLLM_METAL_BACKEND", backend)
+        if not is_metal:
+            monkeypatch.setattr(platforms, "current_platform", CpuPlatform())
+
+        compat.register_model_compat()
+
+        assert "FlintForCausalLM" not in without_flint.get_supported_archs()
+        with pytest.raises(ValueError, match="flint"):
+            AutoConfig.for_model("flint")
 
 
 def _install_fake_qwen35_modules(monkeypatch, *, include_moe: bool):

@@ -140,6 +140,6 @@ def _register_flint_architecture() -> None:
 
 
 def register() -> None:
-    """vLLM general plugin entry point (idempotent)."""
+    """Register Flint's missing config and architecture metadata (idempotent)."""
     _register_flint_config()
     _register_flint_architecture()

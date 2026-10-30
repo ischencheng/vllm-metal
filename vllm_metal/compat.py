@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """Compatibility patches for vLLM + transformers version mismatches.
 
-Applied once at platform registration time. Optional missing dependencies are
-logged; unexpected runtime errors are allowed to surface so regressions remain
-diagnosable.
+Most patches run at platform registration; model-registry compatibility uses
+the later general-plugin hook. Unexpected runtime errors remain visible.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -26,6 +26,28 @@ _EMBEDDING_LOAD_SCOPE: ContextVar[bool] = ContextVar(
 _QWEN35_FP8_BLOCK_SIZE = 128
 _QWEN3_BACKBONE_ROOTS = frozenset({"embed_tokens", "layers", "norm", "lm_head"})
 _EXAONE4_LAYER_TYPE = {"L": "sliding_attention", "G": "full_attention"}
+
+
+def register_model_compat() -> None:
+    """Register missing model metadata for the Metal MLX runner.
+
+    MLX executes the model, while vLLM still queries registered model classes
+    for hybrid capabilities and state-cache metadata. The general-plugin hook
+    runs before ModelConfig inspection, after vllm.config is importable;
+    registering in apply_compat_patches would create an import cycle.
+    """
+    if os.environ.get("VLLM_METAL_BACKEND", "mlx") != "mlx":
+        return
+    from vllm.platforms import current_platform
+
+    from vllm_metal.platform import MetalPlatform
+
+    if not isinstance(current_platform, MetalPlatform):
+        return
+
+    from vllm_metal.flint_compat import register as register_flint
+
+    register_flint()
 
 
 def apply_compat_patches() -> None:
