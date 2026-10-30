@@ -402,6 +402,38 @@ class TestFlintCompat:
         assert config.layer_types[0] == "full_attention"
         assert config.no_rope_layer_indices == [0]
         assert config.num_experts == 8
+        assert config.use_cache is True
+        assert config.initializer_range == 0.02
+
+    def test_flint_checkpoint_fields_survive_save_and_reload(
+        self, without_flint, tmp_path
+    ) -> None:
+        _write_flint_config(tmp_path)
+        path = tmp_path / "config.json"
+        data = json.loads(path.read_text())
+        fields = {"hidden_size": 128, "use_cache": False, "initializer_range": 0.04}
+        path.write_text(json.dumps(data | fields))
+        compat.register_model_compat()
+
+        config = AutoConfig.from_pretrained(tmp_path)
+        config.save_pretrained(tmp_path / "saved")
+        restored = AutoConfig.from_pretrained(tmp_path / "saved")
+
+        assert {key: getattr(restored, key) for key in fields} == fields
+
+    def test_flint_config_rejects_inconsistent_layer_count(
+        self, without_flint, tmp_path
+    ) -> None:
+        _write_flint_config(tmp_path)
+        path = tmp_path / "config.json"
+        data = json.loads(path.read_text())
+        path.write_text(json.dumps(data | {"num_hidden_layers": 4}))
+        compat.register_model_compat()
+
+        with pytest.raises(
+            ValueError, match="layer_types has 3 entries but num_hidden_layers is 4"
+        ):
+            AutoConfig.from_pretrained(tmp_path)
 
     def test_flint_architecture_is_registered(self, without_flint) -> None:
         assert "FlintForCausalLM" not in without_flint.get_supported_archs()
