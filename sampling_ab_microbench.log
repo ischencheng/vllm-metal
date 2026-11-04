@@ -1,27 +1,27 @@
-W1104 03:39:09.673000 45613 torch/_opaque_base.py:6] torch._opaque_base is deprecated, use torch._custom_class_base instead
-W1104 03:39:09.673000 45613 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
-W1104 03:39:09.673000 45613 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
-objc[45613]: Class AVFFrameReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x131e30328) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x135ae83a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
-objc[45613]: Class AVFAudioReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x131e30378) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x135ae83f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+W1104 04:48:04.939000 58459 torch/_opaque_base.py:6] torch._opaque_base is deprecated, use torch._custom_class_base instead
+W1104 04:48:04.940000 58459 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W1104 04:48:04.940000 58459 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+objc[58459]: Class AVFFrameReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x133860328) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x1355743a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[58459]: Class AVFAudioReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x133860378) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x1355743f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
 {"mlx": "0.32.4", "device": "applegpu_g17s", "macos": "26.4.1"}
-qwen3_default  B=  1 sort 0.504 [0.494,0.548]  chunked 0.439 [0.428,0.470]  greedy 0.191
-qwen3_default  B=  2 sort 0.564 [0.553,0.609]  chunked 0.437 [0.428,0.459]  greedy 0.187
-qwen3_default  B=  4 sort 0.890 [0.843,0.965]  chunked 0.493 [0.465,0.507]  greedy 0.192
-qwen3_default  B=  8 sort 1.440 [1.402,1.518]  chunked 0.517 [0.504,0.532]  greedy 0.193
-qwen3_default  B= 16 sort 3.133 [3.081,3.215]  chunked 0.680 [0.666,0.711]  greedy 0.192
-qwen3_default  B= 32 sort 6.750 [6.696,6.807]  chunked 1.168 [1.141,1.261]  greedy 0.230
-qwen3_default  B= 64 sort 13.526 [13.440,13.670]  chunked 2.388 [2.332,2.465]  greedy 0.252
-gemma_default  B=  1 sort 0.634 [0.622,0.681]  chunked 0.499 [0.484,0.542]  greedy 0.232
-gemma_default  B=  2 sort 0.844 [0.810,0.929]  chunked 0.507 [0.490,0.541]  greedy 0.212
-gemma_default  B=  4 sort 1.338 [1.290,1.404]  chunked 0.551 [0.535,0.578]  greedy 0.231
-gemma_default  B=  8 sort 2.639 [2.589,2.722]  chunked 0.686 [0.674,0.716]  greedy 0.226
-gemma_default  B= 16 sort 5.814 [5.732,5.923]  chunked 1.047 [1.031,1.150]  greedy 0.229
-gemma_default  B= 32 sort 12.335 [12.240,12.524]  chunked 2.067 [2.022,2.145]  greedy 0.237
-gemma_default  B= 64 sort 24.465 [24.334,24.764]  chunked 3.899 [3.871,3.986]  greedy 0.325
-qwen3_minp     B=  1 sort 0.532 [0.521,0.604]  chunked 0.445 [0.429,0.483]  greedy 0.184
-qwen3_minp     B=  2 sort 0.611 [0.599,0.652]  chunked 0.458 [0.445,0.499]  greedy 0.191
-qwen3_minp     B=  4 sort 0.958 [0.900,1.026]  chunked 0.496 [0.477,0.507]  greedy 0.197
-qwen3_minp     B=  8 sort 1.580 [1.532,1.651]  chunked 0.546 [0.525,0.593]  greedy 0.194
-qwen3_minp     B= 16 sort 3.336 [3.280,3.417]  chunked 0.693 [0.681,0.724]  greedy 0.195
-qwen3_minp     B= 32 sort 7.092 [7.042,7.169]  chunked 1.168 [1.149,1.269]  greedy 0.240
-qwen3_minp     B= 64 sort 14.361 [14.289,14.482]  chunked 2.395 [2.341,2.470]  greedy 0.253
+qwen3_default  B=  1 sort 0.497 [0.490,0.515]  chunked 0.437 [0.428,0.474]  greedy 0.189
+qwen3_default  B=  2 sort 0.568 [0.556,0.605]  chunked 0.432 [0.423,0.468]  greedy 0.193
+qwen3_default  B=  4 sort 0.894 [0.842,0.964]  chunked 0.471 [0.450,0.504]  greedy 0.192
+qwen3_default  B=  8 sort 1.443 [1.398,1.509]  chunked 0.507 [0.494,0.520]  greedy 0.190
+qwen3_default  B= 16 sort 3.121 [3.066,3.184]  chunked 0.662 [0.645,0.688]  greedy 0.190
+qwen3_default  B= 32 sort 6.722 [6.657,6.805]  chunked 1.084 [1.060,1.178]  greedy 0.235
+qwen3_default  B= 64 sort 13.487 [13.405,13.631]  chunked 2.143 [2.092,2.212]  greedy 0.273
+gemma_default  B=  1 sort 0.634 [0.623,0.685]  chunked 0.497 [0.483,0.507]  greedy 0.221
+gemma_default  B=  2 sort 0.870 [0.817,0.939]  chunked 0.498 [0.487,0.513]  greedy 0.222
+gemma_default  B=  4 sort 1.334 [1.291,1.401]  chunked 0.539 [0.526,0.569]  greedy 0.217
+gemma_default  B=  8 sort 2.623 [2.576,2.691]  chunked 0.671 [0.655,0.691]  greedy 0.225
+gemma_default  B= 16 sort 5.758 [5.695,5.856]  chunked 1.004 [0.980,1.095]  greedy 0.234
+gemma_default  B= 32 sort 12.223 [12.122,12.562]  chunked 1.868 [1.815,1.947]  greedy 0.237
+gemma_default  B= 64 sort 24.228 [24.125,24.988]  chunked 3.523 [3.496,3.585]  greedy 0.325
+qwen3_minp     B=  1 sort 0.531 [0.517,0.584]  chunked 0.436 [0.426,0.460]  greedy 0.185
+qwen3_minp     B=  2 sort 0.613 [0.601,0.659]  chunked 0.445 [0.432,0.475]  greedy 0.189
+qwen3_minp     B=  4 sort 0.954 [0.900,1.021]  chunked 0.496 [0.464,0.509]  greedy 0.193
+qwen3_minp     B=  8 sort 1.569 [1.527,1.640]  chunked 0.510 [0.499,0.527]  greedy 0.192
+qwen3_minp     B= 16 sort 3.319 [3.258,3.377]  chunked 0.675 [0.659,0.695]  greedy 0.191
+qwen3_minp     B= 32 sort 7.077 [7.024,7.164]  chunked 1.090 [1.069,1.196]  greedy 0.237
+qwen3_minp     B= 64 sort 14.294 [14.214,14.443]  chunked 2.155 [2.102,2.233]  greedy 0.249

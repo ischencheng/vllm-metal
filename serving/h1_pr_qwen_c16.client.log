@@ -1,51 +1,51 @@
-W1104 04:01:13.572000 49856 torch/_opaque_base.py:6] torch._opaque_base is deprecated, use torch._custom_class_base instead
-W1104 04:01:13.572000 49856 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
-W1104 04:01:13.572000 49856 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
-objc[49856]: Class AVFFrameReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x12168c328) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x14abac3a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
-objc[49856]: Class AVFAudioReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x12168c378) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x14abac3f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
-W1104 04:01:18.060000 49856 torch/_library/triton.py:53] Triton not available, find_triton_kernels = []
-Namespace(subparser='bench', bench_type='serve', dispatch_function=<function BenchmarkServingSubcommand.cmd at 0x15c5a8180>, trust_remote_code=False, seed=713, num_prompts=64, dataset_name='random', no_stream=False, dataset_path=None, no_oversample=False, skip_chat_template=False, enable_multimodal_chat=False, disable_shuffle=False, custom_output_len=256, custom_ensure_client_side_data=False, spec_bench_output_len=256, spec_bench_category=None, sharegpt_output_len=None, timed_trace_chunk_hash_size=16, timed_trace_sec_multiplier=1, timed_trace_label_timestamp='timestamp', timed_trace_label_input_length='input_length', timed_trace_label_output_length='output_length', timed_trace_label_hash_ids='hash_ids', blazedit_min_distance=0.0, blazedit_max_distance=1.0, asr_max_audio_len_sec=inf, asr_min_audio_len_sec=0.0, random_input_len=1024, random_output_len=256, random_range_ratio='0', random_prefix_len=0, random_batch_size=1, no_reranker=False, random_mm_base_items_per_request=1, random_mm_num_mm_items_range_ratio=0.0, random_mm_limit_mm_per_prompt={'image': 255, 'video': 1}, random_mm_bucket_config={(256, 256, 1): 0.5, (720, 1280, 1): 0.5, (720, 1280, 16): 0.0}, hf_subset=None, hf_split=None, hf_name=None, hf_output_len=None, bfcl_categories=None, prefix_repetition_prefix_len=256, prefix_repetition_suffix_len=256, prefix_repetition_num_prefixes=10, prefix_repetition_output_len=128, speed_bench_dataset_subset='qualitative', speed_bench_output_len=4096, speed_bench_category=None, label=None, backend='openai', base_url='http://127.0.0.1:8011', host='127.0.0.1', port=8000, endpoint='/v1/completions', header=None, max_concurrency=16, model='HF_CACHE/Qwen/Qwen3.5-0.8B', input_len=None, output_len=None, tokenizer=None, tokenizer_mode='auto', use_beam_search=False, logprobs=None, request_rate=inf, burstiness=1.0, probe_request_rate=0.0, disable_tqdm=False, num_warmups=2, profile=False, save_result=True, save_detailed=False, append_result=False, metadata=None, result_dir='EVIDENCE_DIR/bench', result_filename='h1_pr_qwen_c16.json', ignore_eos=True, self_timed=None, percentile_metrics='ttft,tpot,e2el', metric_percentiles='50,95,99', goodput=None, request_id_prefix='bench-177035f1-', top_p=0.95, top_k=20, min_p=None, temperature=0.6, frequency_penalty=None, presence_penalty=None, repetition_penalty=None, served_model_name='bench', lora_modules=None, lora_assignment='random', ramp_up_strategy=None, ramp_up_start_rps=None, ramp_up_end_rps=None, ready_check_timeout_sec=0, chat_template_kwargs=None, extra_body=None, skip_tokenizer_init=False, insecure=False, plot_timeline=False, timeline_itl_thresholds='25,50', plot_dataset_stats=False, log_config_file=None, logging_config=LoggingConfig(log_level='INFO', formatter='text', configure_logging=True, pylogging_config_file=None))
-(MainProcess pid=49856) INFO 11-04 04:01:18 [utils.py:88] Sampling input_len from [1024, 1024] and output_len from [256, 256]
+W1104 05:09:38.438000 61489 torch/_opaque_base.py:6] torch._opaque_base is deprecated, use torch._custom_class_base instead
+W1104 05:09:38.438000 61489 torch/_library/opaque_object.py:288] register_opaque_type is deprecated, use register_custom_class instead
+W1104 05:09:38.439000 61489 torch/_library/opaque_object.py:211] typ='value' is deprecated, use typ='constant' instead
+objc[61489]: Class AVFFrameReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x121334328) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x14b3103a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[61489]: Class AVFAudioReceiver is implemented in both /opt/homebrew/Cellar/ffmpeg/8.1.1/lib/libavdevice.62.3.101.dylib (0x121334378) and VLLM_METAL_CHECKOUT/.venv-vllm-metal/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x14b3103f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+W1104 05:09:42.935000 61489 torch/_library/triton.py:53] Triton not available, find_triton_kernels = []
+Namespace(subparser='bench', bench_type='serve', dispatch_function=<function BenchmarkServingSubcommand.cmd at 0x15ccb0040>, trust_remote_code=False, seed=713, num_prompts=64, dataset_name='random', no_stream=False, dataset_path=None, no_oversample=False, skip_chat_template=False, enable_multimodal_chat=False, disable_shuffle=False, custom_output_len=256, custom_ensure_client_side_data=False, spec_bench_output_len=256, spec_bench_category=None, sharegpt_output_len=None, timed_trace_chunk_hash_size=16, timed_trace_sec_multiplier=1, timed_trace_label_timestamp='timestamp', timed_trace_label_input_length='input_length', timed_trace_label_output_length='output_length', timed_trace_label_hash_ids='hash_ids', blazedit_min_distance=0.0, blazedit_max_distance=1.0, asr_max_audio_len_sec=inf, asr_min_audio_len_sec=0.0, random_input_len=1024, random_output_len=256, random_range_ratio='0', random_prefix_len=0, random_batch_size=1, no_reranker=False, random_mm_base_items_per_request=1, random_mm_num_mm_items_range_ratio=0.0, random_mm_limit_mm_per_prompt={'image': 255, 'video': 1}, random_mm_bucket_config={(256, 256, 1): 0.5, (720, 1280, 1): 0.5, (720, 1280, 16): 0.0}, hf_subset=None, hf_split=None, hf_name=None, hf_output_len=None, bfcl_categories=None, prefix_repetition_prefix_len=256, prefix_repetition_suffix_len=256, prefix_repetition_num_prefixes=10, prefix_repetition_output_len=128, speed_bench_dataset_subset='qualitative', speed_bench_output_len=4096, speed_bench_category=None, label=None, backend='openai', base_url='http://127.0.0.1:8011', host='127.0.0.1', port=8000, endpoint='/v1/completions', header=None, max_concurrency=16, model='HF_CACHE/Qwen/Qwen3.5-0.8B', input_len=None, output_len=None, tokenizer=None, tokenizer_mode='auto', use_beam_search=False, logprobs=None, request_rate=inf, burstiness=1.0, probe_request_rate=0.0, disable_tqdm=False, num_warmups=2, profile=False, save_result=True, save_detailed=False, append_result=False, metadata=None, result_dir='EVIDENCE_DIR/bench', result_filename='h1_pr_qwen_c16.json', ignore_eos=True, self_timed=None, percentile_metrics='ttft,tpot,e2el', metric_percentiles='50,95,99', goodput=None, request_id_prefix='bench-64056e4f-', top_p=0.95, top_k=20, min_p=None, temperature=0.6, frequency_penalty=None, presence_penalty=None, repetition_penalty=None, served_model_name='bench', lora_modules=None, lora_assignment='random', ramp_up_strategy=None, ramp_up_start_rps=None, ramp_up_end_rps=None, ready_check_timeout_sec=0, chat_template_kwargs=None, extra_body=None, skip_tokenizer_init=False, insecure=False, plot_timeline=False, timeline_itl_thresholds='25,50', plot_dataset_stats=False, log_config_file=None, logging_config=LoggingConfig(log_level='INFO', formatter='text', configure_logging=True, pylogging_config_file=None))
+(MainProcess pid=61489) INFO 11-04 05:09:43 [utils.py:88] Sampling input_len from [1024, 1024] and output_len from [256, 256]
 WARNING: /tokenize unavailable (404 Not Found: either this server has no /tokenize route, or it does not serve a model named `HF_CACHE/Qwen/Qwen3.5-0.8B` (its served names are listed by GET /v1/models)), skipping alignment.
 Starting initial single prompt test run...
 Skipping endpoint ready check.
 Warming up with 2 requests...
-  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:02<00:02,  2.25s/it]100%|██████████| 2/2 [00:02<00:00,  1.13s/it]
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:02<00:02,  2.19s/it]100%|██████████| 2/2 [00:02<00:00,  1.09s/it]
 Warmup run completed.
 Starting main benchmark run...
 Traffic request rate: inf
 Burstiness factor: 1.0 (Poisson process)
 Maximum request concurrency: 16
-  0%|          | 0/64 [00:00<?, ?it/s]  2%|▏         | 1/64 [00:04<04:42,  4.48s/it]  5%|▍         | 3/64 [00:04<01:13,  1.20s/it] 11%|█         | 7/64 [00:04<00:24,  2.36it/s] 14%|█▍        | 9/64 [00:04<00:16,  3.24it/s] 17%|█▋        | 11/64 [00:05<00:12,  4.31it/s] 20%|██        | 13/64 [00:05<00:09,  5.53it/s] 23%|██▎       | 15/64 [00:05<00:07,  6.84it/s] 27%|██▋       | 17/64 [00:09<00:30,  1.52it/s] 30%|██▉       | 19/64 [00:09<00:21,  2.11it/s] 34%|███▍      | 22/64 [00:09<00:12,  3.24it/s] 38%|███▊      | 24/64 [00:09<00:09,  4.10it/s] 41%|████      | 26/64 [00:09<00:07,  5.14it/s] 44%|████▍     | 28/64 [00:09<00:05,  6.29it/s] 47%|████▋     | 30/64 [00:09<00:04,  7.53it/s] 50%|█████     | 32/64 [00:09<00:03,  8.74it/s] 53%|█████▎    | 34/64 [00:13<00:18,  1.64it/s] 56%|█████▋    | 36/64 [00:13<00:12,  2.20it/s] 61%|██████    | 39/64 [00:13<00:07,  3.34it/s] 64%|██████▍   | 41/64 [00:14<00:05,  4.21it/s] 67%|██████▋   | 43/64 [00:14<00:04,  5.24it/s] 70%|███████   | 45/64 [00:14<00:02,  6.40it/s] 73%|███████▎  | 47/64 [00:14<00:02,  7.61it/s] 77%|███████▋  | 49/64 [00:18<00:09,  1.61it/s] 88%|████████▊ | 56/64 [00:18<00:02,  3.82it/s]100%|██████████| 64/64 [00:18<00:00,  3.51it/s]
+  0%|          | 0/64 [00:00<?, ?it/s]  2%|▏         | 1/64 [00:04<04:38,  4.41s/it]  5%|▍         | 3/64 [00:04<01:12,  1.18s/it] 11%|█         | 7/64 [00:04<00:23,  2.40it/s] 14%|█▍        | 9/64 [00:04<00:16,  3.30it/s] 17%|█▋        | 11/64 [00:05<00:12,  4.37it/s] 20%|██        | 13/64 [00:05<00:09,  5.61it/s] 23%|██▎       | 15/64 [00:05<00:07,  6.93it/s] 27%|██▋       | 17/64 [00:08<00:30,  1.53it/s] 30%|██▉       | 19/64 [00:08<00:21,  2.13it/s] 34%|███▍      | 22/64 [00:09<00:12,  3.27it/s] 38%|███▊      | 24/64 [00:09<00:09,  4.14it/s] 41%|████      | 26/64 [00:09<00:07,  5.16it/s] 44%|████▍     | 28/64 [00:09<00:05,  6.34it/s] 47%|████▋     | 30/64 [00:09<00:04,  7.58it/s] 50%|█████     | 32/64 [00:09<00:03,  8.81it/s] 53%|█████▎    | 34/64 [00:13<00:18,  1.65it/s] 56%|█████▋    | 36/64 [00:13<00:12,  2.21it/s] 61%|██████    | 39/64 [00:13<00:07,  3.37it/s] 64%|██████▍   | 41/64 [00:13<00:05,  4.25it/s] 67%|██████▋   | 43/64 [00:14<00:03,  5.27it/s] 70%|███████   | 45/64 [00:14<00:02,  6.43it/s] 73%|███████▎  | 47/64 [00:14<00:02,  7.67it/s] 77%|███████▋  | 49/64 [00:17<00:09,  1.62it/s] 88%|████████▊ | 56/64 [00:18<00:02,  3.85it/s]100%|██████████| 64/64 [00:18<00:00,  3.55it/s]
 tip: install termplotlib and gnuplot to plot the metrics
 ============ Serving Benchmark Result ============
 Successful requests:                     64        
 Failed requests:                         0         
 Maximum request concurrency:             16        
-Benchmark duration (s):                  18.23     
+Benchmark duration (s):                  18.05     
 Total input tokens:                      65536     
 Total generated tokens:                  16384     
-Request throughput (req/s):              3.51      
-Output token throughput (tok/s):         898.94    
+Request throughput (req/s):              3.55      
+Output token throughput (tok/s):         907.90    
 Peak output token throughput (tok/s):    1216.00   
-Peak concurrent requests:                32.00     
-Total token throughput (tok/s):          4494.68   
+Peak concurrent requests:                29.00     
+Total token throughput (tok/s):          4539.49   
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          500.72    
-Median TTFT (ms):                        421.01    
-P50 TTFT (ms):                           421.01    
-P95 TTFT (ms):                           1101.06   
-P99 TTFT (ms):                           1132.72   
+Mean TTFT (ms):                          491.47    
+Median TTFT (ms):                        420.17    
+P50 TTFT (ms):                           420.17    
+P95 TTFT (ms):                           1070.93   
+P99 TTFT (ms):                           1102.23   
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          15.86     
-Median TPOT (ms):                        15.95     
-P50 TPOT (ms):                           15.95     
-P95 TPOT (ms):                           16.83     
-P99 TPOT (ms):                           17.03     
+Mean TPOT (ms):                          15.72     
+Median TPOT (ms):                        15.83     
+P50 TPOT (ms):                           15.83     
+P95 TPOT (ms):                           16.72     
+P99 TPOT (ms):                           16.93     
 ----------------End-to-end Latency----------------
-Mean E2EL (ms):                          4545.13   
-Median E2EL (ms):                        4534.94   
-P50 E2EL (ms):                           4534.94   
-P95 E2EL (ms):                           5208.35   
-P99 E2EL (ms):                           5365.51   
+Mean E2EL (ms):                          4500.17   
+Median E2EL (ms):                        4507.12   
+P50 E2EL (ms):                           4507.12   
+P95 E2EL (ms):                           5126.89   
+P99 E2EL (ms):                           5282.85   
 ==================================================

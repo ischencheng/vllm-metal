@@ -29,5 +29,6 @@ sw main; $D/serve_multi_bench.sh g2_main $G 1024 256 16 $D/cfg_gemma.txt --gpu-m
 sw $B
 echo "e2e done $(date '+%H:%M:%S') $(pmset -g batt | head -1) swap: $(sysctl -n vm.swapusage)"
 ( cd $R && source .venv-vllm-metal/bin/activate && python $D/distribution_parity.py $M 10000 > $D/distribution_parity.log 2>&1; tail -5 $D/distribution_parity.log )
+( cd $R && source .venv-vllm-metal/bin/activate && pytest -m "not slow" tests/ .github/scripts/test_parity.py -q --tb=short -p no:cacheprovider > $D/fast_suite.log 2>&1; tail -1 $D/fast_suite.log )
 echo "end $(date '+%H:%M:%S')"
 touch $D/all.done

@@ -1,69 +1,70 @@
-start 03:39:06 Now drawing from 'AC Power' swap: total = 9216.00M  used = 8511.06M  free = 704.94M  (encrypted)
-checkout perf/native-topk-candidates f600c1d 03:39:06
-qwen3_minp     B= 16 sort 3.336 [3.280,3.417]  chunked 0.693 [0.681,0.724]  greedy 0.195
-qwen3_minp     B= 32 sort 7.092 [7.042,7.169]  chunked 1.168 [1.149,1.269]  greedy 0.240
-qwen3_minp     B= 64 sort 14.361 [14.289,14.482]  chunked 2.395 [2.341,2.470]  greedy 0.253
-microbench done 03:39:37
-checkout main fc9c6ee 03:39:37
-r1_main qwen_c1 Output token throughput (tok/s): 79.45  Median TPOT (ms): 11.35  
-r1_main qwen_c8 Output token throughput (tok/s): 224.46  Median TPOT (ms): 29.58  
-r1_main qwen_c16 Output token throughput (tok/s): 260.91  Median TPOT (ms): 52.93  
-r1_main greedy_c16 Output token throughput (tok/s): 276.77  Median TPOT (ms): 49.48  
-checkout perf/native-topk-candidates f600c1d 03:44:10
-r1_pr qwen_c1 Output token throughput (tok/s): 80.59  Median TPOT (ms): 11.18  
-r1_pr qwen_c8 Output token throughput (tok/s): 230.10  Median TPOT (ms): 28.79  
-r1_pr qwen_c16 Output token throughput (tok/s): 271.51  Median TPOT (ms): 50.71  
-r1_pr greedy_c16 Output token throughput (tok/s): 275.89  Median TPOT (ms): 49.69  
-r2_pr qwen_c1 Output token throughput (tok/s): 80.57  Median TPOT (ms): 11.17  
-r2_pr qwen_c8 Output token throughput (tok/s): 230.48  Median TPOT (ms): 28.67  
-r2_pr qwen_c16 Output token throughput (tok/s): 274.00  Median TPOT (ms): 50.09  
-r2_pr greedy_c16 Output token throughput (tok/s): 276.49  Median TPOT (ms): 49.56  
-checkout main fc9c6ee 03:52:54
-r2_main qwen_c1 Output token throughput (tok/s): 79.80  Median TPOT (ms): 11.31  
-r2_main qwen_c8 Output token throughput (tok/s): 224.82  Median TPOT (ms): 29.50  
-r2_main qwen_c16 Output token throughput (tok/s): 263.21  Median TPOT (ms): 52.54  
-r2_main greedy_c16 Output token throughput (tok/s): 276.35  Median TPOT (ms): 49.68  
-h1_main qwen_c4 Output token throughput (tok/s): 401.53  Median TPOT (ms): 9.16  
-h1_main qwen_c16 Output token throughput (tok/s): 721.58  Median TPOT (ms): 20.29  
-h1_main qwen_c32 Output token throughput (tok/s): 809.30  Median TPOT (ms): 37.39  
-h1_main greedy_c32 Output token throughput (tok/s): 1135.33  Median TPOT (ms): 26.13  
-checkout perf/native-topk-candidates f600c1d 04:00:23
-h1_pr qwen_c4 Output token throughput (tok/s): 434.40  Median TPOT (ms): 8.43  
-h1_pr qwen_c16 Output token throughput (tok/s): 898.94  Median TPOT (ms): 15.95  
-h1_pr qwen_c32 Output token throughput (tok/s): 1071.96  Median TPOT (ms): 27.82  
-h1_pr greedy_c32 Output token throughput (tok/s): 1136.46  Median TPOT (ms): 26.12  
-h2_pr qwen_c4 Output token throughput (tok/s): 432.90  Median TPOT (ms): 8.46  
-h2_pr qwen_c16 Output token throughput (tok/s): 898.45  Median TPOT (ms): 16.05  
-h2_pr qwen_c32 Output token throughput (tok/s): 1071.98  Median TPOT (ms): 27.76  
-h2_pr greedy_c32 Output token throughput (tok/s): 1135.66  Median TPOT (ms): 26.13  
-checkout main fc9c6ee 04:05:45
-h2_main qwen_c4 Output token throughput (tok/s): 399.51  Median TPOT (ms): 9.23  
-h2_main qwen_c16 Output token throughput (tok/s): 716.28  Median TPOT (ms): 20.48  
-h2_main qwen_c32 Output token throughput (tok/s): 806.31  Median TPOT (ms): 37.51  
-h2_main greedy_c32 Output token throughput (tok/s): 1135.22  Median TPOT (ms): 26.17  
-g1_main gemma_c1 Output token throughput (tok/s): 117.85  Median TPOT (ms): 8.18  
-g1_main gemma_c8 Output token throughput (tok/s): 375.18  Median TPOT (ms): 20.02  
-g1_main gemma_c16 Output token throughput (tok/s): 402.21  Median TPOT (ms): 37.99  
-g1_main greedy_c16 Output token throughput (tok/s): 466.29  Median TPOT (ms): 32.52  
-checkout perf/native-topk-candidates f600c1d 04:12:21
-g1_pr gemma_c1 Output token throughput (tok/s): 120.17  Median TPOT (ms): 7.99  
-g1_pr gemma_c8 Output token throughput (tok/s): 411.80  Median TPOT (ms): 18.13  
-g1_pr gemma_c16 Output token throughput (tok/s): 455.38  Median TPOT (ms): 33.30  
-g1_pr greedy_c16 Output token throughput (tok/s): 465.54  Median TPOT (ms): 32.62  
-g2_pr gemma_c1 Output token throughput (tok/s): 120.29  Median TPOT (ms): 8.00  
-g2_pr gemma_c8 Output token throughput (tok/s): 411.47  Median TPOT (ms): 18.17  
-g2_pr gemma_c16 Output token throughput (tok/s): 454.61  Median TPOT (ms): 33.42  
-g2_pr greedy_c16 Output token throughput (tok/s): 465.81  Median TPOT (ms): 32.57  
-checkout main fc9c6ee 04:19:10
-g2_main gemma_c1 Output token throughput (tok/s): 117.79  Median TPOT (ms): 8.17  
-g2_main gemma_c8 Output token throughput (tok/s): 375.21  Median TPOT (ms): 20.05  
-g2_main gemma_c16 Output token throughput (tok/s): 401.62  Median TPOT (ms): 38.03  
-g2_main greedy_c16 Output token throughput (tok/s): 465.82  Median TPOT (ms): 32.60  
-checkout perf/native-topk-candidates f600c1d 04:22:41
-e2e done 04:22:41 Now drawing from 'AC Power' swap: total = 18432.00M  used = 17692.50M  free = 739.50M  (encrypted)
-    main()
-  File "EVIDENCE_DIR/distribution_parity.py", line 121, in main
-    t = SamplingBatch.native_decode_tokens(
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: type object 'SamplingBatch' has no attribute 'native_decode_tokens'. Did you mean: 'native_sample_tokens'?
-end 04:22:51
+start 04:48:02 Now drawing from 'AC Power' swap: total = 18432.00M  used = 17620.50M  free = 811.50M  (encrypted)
+checkout perf/native-topk-candidates 955b1e2 04:48:02
+qwen3_minp     B= 16 sort 3.319 [3.258,3.377]  chunked 0.675 [0.659,0.695]  greedy 0.191
+qwen3_minp     B= 32 sort 7.077 [7.024,7.164]  chunked 1.090 [1.069,1.196]  greedy 0.237
+qwen3_minp     B= 64 sort 14.294 [14.214,14.443]  chunked 2.155 [2.102,2.233]  greedy 0.249
+microbench done 04:48:31
+checkout main fc9c6ee 04:48:31
+r1_main qwen_c1 Output token throughput (tok/s): 79.83  Median TPOT (ms): 11.29  
+r1_main qwen_c8 Output token throughput (tok/s): 224.62  Median TPOT (ms): 29.58  
+r1_main qwen_c16 Output token throughput (tok/s): 262.24  Median TPOT (ms): 52.61  
+r1_main greedy_c16 Output token throughput (tok/s): 277.23  Median TPOT (ms): 49.42  
+checkout perf/native-topk-candidates 955b1e2 04:52:53
+r1_pr qwen_c1 Output token throughput (tok/s): 80.84  Median TPOT (ms): 11.16  
+r1_pr qwen_c8 Output token throughput (tok/s): 231.06  Median TPOT (ms): 28.62  
+r1_pr qwen_c16 Output token throughput (tok/s): 274.79  Median TPOT (ms): 49.95  
+r1_pr greedy_c16 Output token throughput (tok/s): 276.63  Median TPOT (ms): 49.61  
+r2_pr qwen_c1 Output token throughput (tok/s): 80.81  Median TPOT (ms): 11.17  
+r2_pr qwen_c8 Output token throughput (tok/s): 231.30  Median TPOT (ms): 28.58  
+r2_pr qwen_c16 Output token throughput (tok/s): 274.92  Median TPOT (ms): 49.96  
+r2_pr greedy_c16 Output token throughput (tok/s): 277.05  Median TPOT (ms): 49.47  
+checkout main fc9c6ee 05:01:31
+r2_main qwen_c1 Output token throughput (tok/s): 80.05  Median TPOT (ms): 11.27  
+r2_main qwen_c8 Output token throughput (tok/s): 225.23  Median TPOT (ms): 29.49  
+r2_main qwen_c16 Output token throughput (tok/s): 263.73  Median TPOT (ms): 52.36  
+r2_main greedy_c16 Output token throughput (tok/s): 276.98  Median TPOT (ms): 49.47  
+h1_main qwen_c4 Output token throughput (tok/s): 401.60  Median TPOT (ms): 9.17  
+h1_main qwen_c16 Output token throughput (tok/s): 723.51  Median TPOT (ms): 20.32  
+h1_main qwen_c32 Output token throughput (tok/s): 808.92  Median TPOT (ms): 37.34  
+h1_main greedy_c32 Output token throughput (tok/s): 1141.08  Median TPOT (ms): 26.02  
+checkout perf/native-topk-candidates 955b1e2 05:08:48
+h1_pr qwen_c4 Output token throughput (tok/s): 434.61  Median TPOT (ms): 8.42  
+h1_pr qwen_c16 Output token throughput (tok/s): 907.90  Median TPOT (ms): 15.83  
+h1_pr qwen_c32 Output token throughput (tok/s): 1080.83  Median TPOT (ms): 27.52  
+h1_pr greedy_c32 Output token throughput (tok/s): 1139.91  Median TPOT (ms): 26.01  
+h2_pr qwen_c4 Output token throughput (tok/s): 434.26  Median TPOT (ms): 8.43  
+h2_pr qwen_c16 Output token throughput (tok/s): 910.48  Median TPOT (ms): 15.74  
+h2_pr qwen_c32 Output token throughput (tok/s): 1082.78  Median TPOT (ms): 27.47  
+h2_pr greedy_c32 Output token throughput (tok/s): 1140.97  Median TPOT (ms): 26.02  
+checkout main fc9c6ee 05:14:08
+h2_main qwen_c4 Output token throughput (tok/s): 400.42  Median TPOT (ms): 9.21  
+h2_main qwen_c16 Output token throughput (tok/s): 721.81  Median TPOT (ms): 20.30  
+h2_main qwen_c32 Output token throughput (tok/s): 810.25  Median TPOT (ms): 37.32  
+h2_main greedy_c32 Output token throughput (tok/s): 1141.80  Median TPOT (ms): 26.02  
+g1_main gemma_c1 Output token throughput (tok/s): 118.02  Median TPOT (ms): 8.18  
+g1_main gemma_c8 Output token throughput (tok/s): 375.45  Median TPOT (ms): 20.04  
+g1_main gemma_c16 Output token throughput (tok/s): 401.63  Median TPOT (ms): 38.09  
+g1_main greedy_c16 Output token throughput (tok/s): 465.54  Median TPOT (ms): 32.61  
+checkout perf/native-topk-candidates 955b1e2 05:20:32
+g1_pr gemma_c1 Output token throughput (tok/s): 120.69  Median TPOT (ms): 7.98  
+g1_pr gemma_c8 Output token throughput (tok/s): 412.12  Median TPOT (ms): 18.13  
+g1_pr gemma_c16 Output token throughput (tok/s): 456.14  Median TPOT (ms): 33.28  
+g1_pr greedy_c16 Output token throughput (tok/s): 465.63  Median TPOT (ms): 32.56  
+g2_pr gemma_c1 Output token throughput (tok/s): 119.96  Median TPOT (ms): 8.02  
+g2_pr gemma_c8 Output token throughput (tok/s): 411.85  Median TPOT (ms): 18.12  
+g2_pr gemma_c16 Output token throughput (tok/s): 456.17  Median TPOT (ms): 33.28  
+g2_pr greedy_c16 Output token throughput (tok/s): 464.93  Median TPOT (ms): 32.59  
+checkout main fc9c6ee 05:27:18
+g2_main gemma_c1 Output token throughput (tok/s): 117.26  Median TPOT (ms): 8.19  
+g2_main gemma_c8 Output token throughput (tok/s): 375.17  Median TPOT (ms): 20.04  
+g2_main gemma_c16 Output token throughput (tok/s): 401.78  Median TPOT (ms): 37.96  
+g2_main greedy_c16 Output token throughput (tok/s): 466.11  Median TPOT (ms): 32.52  
+checkout perf/native-topk-candidates 955b1e2 05:30:51
+e2e done 05:30:51 Now drawing from 'AC Power' swap: total = 18432.00M  used = 17521.81M  free = 910.19M  (encrypted)
+masked hits: {'native': 0, 'torch': 0}
+worst per-token TV (tie choice counts as a difference): {'native': np.float64(0.0161), 'torch': np.float64(0.0199), 'ideal': np.float64(0.0217)}
+native: chi2 p<0.01 in 0/23, median p 0.588
+torch: chi2 p<0.01 in 0/23, median p 0.411
+ideal: chi2 p<0.01 in 0/23, median p 0.495
+6286 passed, 21 skipped, 315 deselected, 2 warnings in 126.20s (0:02:06)
+end 05:43:13
