@@ -1,0 +1,4 @@
+qwen_c1 1 8 --temperature 0.6 --top-p 0.95 --top-k 20
+qwen_c8 8 32 --temperature 0.6 --top-p 0.95 --top-k 20
+qwen_c16 16 64 --temperature 0.6 --top-p 0.95 --top-k 20
+greedy_c16 16 64 --temperature 0

@@ -1,0 +1,4 @@
+gemma_c1 1 8 --temperature 1.0 --top-p 0.95 --top-k 64
+gemma_c8 8 32 --temperature 1.0 --top-p 0.95 --top-k 64
+gemma_c16 16 64 --temperature 1.0 --top-p 0.95 --top-k 64
+greedy_c16 16 64 --temperature 0
