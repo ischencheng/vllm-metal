@@ -1,6 +1,6 @@
 # Native top-k without a vocab sort: benchmark records
 
-Records for the vllm-metal PR that picks native top-k candidates from the top chunks instead of argsorting the whole vocab (branch `perf/native-topk-candidates`, commit `955b1e2`, base `fc9c6ee`).
+Records for the vllm-metal PR that picks native top-k candidates from the top chunks instead of argsorting the whole vocab (branch `perf/native-topk-candidates`, commit `955b1e2`, base `fc9c6ee`; later commits on the branch only change a test).
 
 Machine: Apple M5 Pro, 20-core GPU, 48 GB, macOS 26.4.1, AC power. MLX 0.32.4, vLLM 0.33.0, torch 2.14.0. The PR changes no native code; both arms use the same native build.
 
@@ -9,6 +9,7 @@ Machine: Apple M5 Pro, 20-core GPU, 48 GB, macOS 26.4.1, AC power. MLX 0.32.4, v
 - `distribution_parity.log`: native and torch samplers against the exact masked distribution on real Qwen3-4B logits, 10,000 draws per case (`scripts/distribution_parity.py`). Statistics are per class of equal logits.
 - `fast_suite.log`: `pytest -m "not slow" tests/ .github/scripts/test_parity.py` on `955b1e2`.
 - `threshold_bench.log`, `threshold_bench_small_vocab.log`: the two paths near the top-k bound and for small vocabs and batches, which set `TOP_K_MIN_BATCH_LOGITS`. These ran with the guard off, so both arms are real.
+- `machine_state.txt`: `pmset -g` output. Swap at the start and end of the runs is in `serving/run_all.log`.
 - `first_run_f600c1d/`: the same runs on the previous commit of the branch, before the small-batch guard and the tie mask reuse.
 - `stack_on_1234.patch`, `stack_on_1234_microbench.log` / `.json`: the same change ported onto PR #1234 at `95da4bb`, and one sampling step there, same method. `sort` is #1234 as is, `chunked` adds this change. The temp_only, min_p and top_p_only rows don't take the chunked path, so their two arms should match.
 
