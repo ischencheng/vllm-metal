@@ -30,9 +30,9 @@ def _install_input_ops():
     from vllm.v1.worker.gpu import block_table, input_batch, model_runner
     from vllm.v1.worker.gpu.mm.rope import RopeState
     from vllm.v1.worker.gpu.model_states.mamba_hybrid import MambaHybridModelState
-    from vllm.v1.worker.gpu.sample import sampler
+    from vllm.v1.worker.gpu.sample import sampler, states
 
-    from vllm_metal.pytorch_backend import input_ops
+    from vllm_metal.pytorch_backend import input_ops, sampling
 
     RopeState.prepare_positions = input_ops.prepare_rope_positions
 
@@ -48,6 +48,8 @@ def _install_input_ops():
         setattr(model_runner, name, getattr(input_ops, name))
     input_batch.get_num_sampled_and_rejected = input_ops.get_num_sampled_and_rejected
     sampler.get_num_sampled_and_rejected = input_ops.get_num_sampled_and_rejected
+    sampler.apply_top_k_top_p = sampling.apply_top_k_top_p
+    states.apply_top_k_top_p = sampling.apply_top_k_top_p
     block_table.BlockTables.gather_block_tables = input_ops.gather_block_tables
     block_table.BlockTables.apply_staged_writes = input_ops.apply_block_table_writes
     block_table.BlockTables.compute_slot_mappings = input_ops.compute_slot_mappings

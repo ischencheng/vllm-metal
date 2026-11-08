@@ -37,6 +37,86 @@ def min_p(logits, stride, mapping, values, vocab_size, BLOCK_SIZE):
     logits.masked_fill_(logits < threshold, -float("inf"))
 
 
+def apply_top_k_top_p(logits, k, p, has_topp_only_rows=True):
+    """Filter float32 ``[rows, vocab]`` logits with the shared Metal kernels."""
+    if k is None and p is None:
+        return logits
+    library, _, _ = _gumbel_kernel()
+    rows, vocab = logits.shape
+    device = logits.device
+    logits = logits.contiguous()
+    top_k = (
+        torch.full((rows,), vocab, dtype=torch.int32, device=device)
+        if k is None
+        else k.int().contiguous()
+    )
+    top_p = (
+        torch.ones(rows, dtype=torch.float32, device=device)
+        if p is None
+        else p.float().contiguous()
+    )
+    # vLLM applies min-p in its own earlier step.
+    min_p = torch.zeros(rows, dtype=torch.float32, device=device)
+    slices = (vocab + 16383) // 16384
+    blocks = (vocab + 1023) // 1024
+    slice_max = torch.empty((rows, slices), dtype=torch.float32, device=device)
+    slice_sum = torch.empty((rows, slices), dtype=torch.float32, device=device)
+    histogram = torch.zeros((rows, 2048), dtype=torch.uint32, device=device)
+    cutoff = torch.empty(rows, dtype=torch.float32, device=device)
+    drop_ties = torch.empty(rows, dtype=torch.uint32, device=device)
+    tie_prefix = torch.empty((rows, blocks), dtype=torch.uint32, device=device)
+    masked = torch.empty_like(logits)
+    group_size = (1024, 1, 1)
+    library.filter_stats(
+        logits,
+        top_k,
+        top_p,
+        min_p,
+        slice_max,
+        slice_sum,
+        vocab,
+        threads=(1024 * slices, rows, 1),
+        group_size=group_size,
+    )
+    library.filter_histogram(
+        logits,
+        top_k,
+        top_p,
+        slice_max,
+        slice_sum,
+        histogram,
+        vocab,
+        threads=(1024 * slices, rows, 1),
+        group_size=group_size,
+    )
+    library.filter_select(
+        logits,
+        top_k,
+        top_p,
+        min_p,
+        slice_max,
+        slice_sum,
+        histogram,
+        cutoff,
+        drop_ties,
+        tie_prefix,
+        vocab,
+        threads=(1024, rows, 1),
+        group_size=group_size,
+    )
+    library.filter_mask(
+        logits,
+        cutoff,
+        drop_ties,
+        tie_prefix,
+        masked,
+        vocab,
+        threads=(1024 * blocks, rows, 1),
+        group_size=group_size,
+    )
+    return masked
+
+
 def gumbel_sample(
     argmax,
     argmax_stride,

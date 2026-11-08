@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MLX-native temperature/top-k/top-p sampling."""
 
+import math
+
 import mlx.core as mx
 import pytest
 import torch
@@ -14,25 +16,20 @@ VOCAB_SIZE = 512
 BATCH_SIZE = 4
 
 
-def _masked_in_vocab_order(
+def _filtered(
     logits: mx.array,
     top_k: list[int],
     top_p: list[float],
     min_p: list[float] | None = None,
 ) -> mx.array:
-    """The native path's candidate mask, scattered back into vocab order.
+    """The native path's filter, called directly on per-row k/p values."""
+    from vllm_metal.metal import get_ops
 
-    Calls the production masking directly so these tests exercise what
-    sampling runs, and only rearranges its output for comparison with vLLM.
-    """
-    sorted_desc, sorted_idx = SamplingBatch._sorted_candidate_logits(
-        logits, top_k, top_p, min_p if min_p is not None else [0.0] * len(top_k)
-    )
-    return mx.put_along_axis(
-        mx.full(logits.shape, -mx.inf, dtype=logits.dtype),
-        sorted_idx,
-        sorted_desc,
-        axis=-1,
+    return get_ops().filter_top_k_top_p(
+        logits,
+        mx.array(top_k, dtype=mx.int32),
+        mx.array(top_p, dtype=mx.float32),
+        mx.array(min_p if min_p is not None else [0.0] * len(top_k), dtype=mx.float32),
     )
 
 
@@ -147,9 +144,7 @@ class TestTopKTopPMaskParity:
         )
         p_arg = None if top_p == 1.0 else torch.full((BATCH_SIZE,), top_p)
 
-        masked_mlx = _masked_in_vocab_order(
-            logits, [top_k] * BATCH_SIZE, [top_p] * BATCH_SIZE
-        )
+        masked_mlx = _filtered(logits, [top_k] * BATCH_SIZE, [top_p] * BATCH_SIZE)
         mx.eval(masked_mlx)
         masked_ref = apply_top_k_top_p(logits_torch.clone(), k_arg, p_arg)
 
@@ -166,7 +161,7 @@ class TestTopKTopPMaskParity:
         logits = mx.array([[2.0, 2.0, 2.0, 2.0]])
         logits_torch = torch.full((1, 4), 2.0)
 
-        masked = _masked_in_vocab_order(logits, [0], [0.25])
+        masked = _filtered(logits, [0], [0.25])
         mx.eval(masked)
         masked_ref = apply_top_k_top_p(logits_torch, None, torch.full((1,), 0.25))
 
@@ -180,7 +175,7 @@ class TestTopKTopPMaskParity:
         mx.eval(logits)
         top_k = [20, 0, 7, VOCAB_SIZE]
         top_p = [1.0, 0.9, 0.5, 0.75]
-        masked_mlx = _masked_in_vocab_order(logits, top_k, top_p)
+        masked_mlx = _filtered(logits, top_k, top_p)
         mx.eval(masked_mlx)
         logits_torch = torch.tensor(logits.tolist())
         k_arg = torch.tensor([k if 0 < k < VOCAB_SIZE else VOCAB_SIZE for k in top_k])
@@ -196,19 +191,10 @@ class TestTopKTopPMaskParity:
         logits = mx.array(
             [[3.0, 2.0, 2.0, 2.0, 1.0, 0.0], [5.0, 4.0, 3.0, 2.0, 1.0, 0.0]]
         )
-        sorted_desc, sorted_idx = SamplingBatch._sorted_candidate_logits(
-            logits, [2, 4], [1.0, 1.0], [0.0, 0.0]
-        )
-        mx.eval(sorted_desc, sorted_idx)
+        masked = _filtered(logits, [2, 4], [1.0, 1.0])
         kept_rows = [
-            {
-                int(t)
-                for t, v in zip(idx_row, val_row, strict=True)
-                if v != float("-inf")
-            }
-            for idx_row, val_row in zip(
-                sorted_idx.tolist(), sorted_desc.tolist(), strict=True
-            )
+            {t for t, v in enumerate(row) if v != float("-inf")}
+            for row in masked.tolist()
         ]
         assert kept_rows == [{0, 1, 2, 3}, {0, 1, 2, 3}]
 
@@ -220,17 +206,8 @@ class TestTopKTopPMaskParity:
         A candidate set capped at the row's own ``top_k`` would keep two.
         """
         logits = mx.array([[3.0, 2.0, 2.0, 2.0, 1.0, 0.0]])
-        sorted_desc, sorted_idx = SamplingBatch._sorted_candidate_logits(
-            logits, [2], [1.0], [0.0]
-        )
-        mx.eval(sorted_desc, sorted_idx)
-        kept = {
-            int(t)
-            for t, v in zip(
-                sorted_idx.tolist()[0], sorted_desc.tolist()[0], strict=True
-            )
-            if v != float("-inf")
-        }
+        masked = _filtered(logits, [2], [1.0])
+        kept = {t for t, v in enumerate(masked.tolist()[0]) if v != float("-inf")}
 
         masked_ref = apply_top_k_top_p(
             torch.tensor([[3.0, 2.0, 2.0, 2.0, 1.0, 0.0]]),
@@ -241,6 +218,40 @@ class TestTopKTopPMaskParity:
             i for i, v in enumerate(masked_ref.tolist()[0]) if v != float("-inf")
         }
         assert kept == kept_ref == {0, 1, 2, 3}
+
+    def test_partial_top_p_ties_span_slices_and_blocks(self) -> None:
+        """Ties cut mid-way by top-p drop the lowest IDs across the whole row."""
+        vocab = 40_000
+        logits = mx.full((1, vocab), -mx.inf, dtype=mx.float32)
+        tied = mx.array(list(range(0, vocab, 10)))
+        logits[:, tied] = 0.0
+
+        masked = _filtered(logits, [0], [0.5])
+        kept = [t for t, v in enumerate(masked.tolist()[0]) if v != float("-inf")]
+
+        assert kept == list(range(20_000, vocab, 10))
+
+    def test_top_k_and_min_p_rows_stay_exact_in_a_large_vocab(self) -> None:
+        vocab = 262_144
+        logits = mx.random.normal((3, vocab), key=mx.random.key(3)) * 3.0
+        mx.eval(logits)
+        top_k = [64, 0, 5000]
+        min_p = [0.0, 0.05, 0.01]
+
+        masked = _filtered(logits, top_k, [1.0, 1.0, 1.0], min_p)
+
+        kept = mx.sum(masked != -mx.inf, axis=-1).tolist()
+        kth = [
+            mx.sort(logits[i])[-k].item() if k else None for i, k in enumerate(top_k)
+        ]
+        row_max = mx.max(logits, axis=-1).tolist()
+        floors = [
+            kth[0],
+            row_max[1] + math.log(0.05),
+            max(kth[2], row_max[2] + math.log(0.01)),
+        ]
+        expected = [mx.sum(logits[i] >= floors[i]).item() for i in range(3)]
+        assert kept == expected
 
 
 class TestMlxRandomTokens:
@@ -635,6 +646,35 @@ def _check_mps_sampler_against_upstream():
             False,
         )
         assert mps_ids.cpu().tolist() == expected, logits.shape[-1]
+
+
+@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="requires MPS")
+def test_mps_filter_matches_mlx(run_in_spawn_process):
+    """Both backends drive the same kernels, so their masks must agree."""
+    run_in_spawn_process(_check_mps_filter_against_mlx)
+
+
+def _check_mps_filter_against_mlx():
+    from vllm_metal.metal import get_ops
+    from vllm_metal.pytorch_backend import sampling
+
+    logits = torch.randn((4, 20_000), generator=torch.Generator().manual_seed(0)) * 3
+    top_k, top_p = [20, 20_000, 500, 1], [1.0, 0.9, 0.5, 1.0]
+    mlx_logits = mx.array(logits.numpy())
+
+    masked_mlx = get_ops().filter_top_k_top_p(
+        mlx_logits,
+        mx.array(top_k, dtype=mx.int32),
+        mx.array(top_p, dtype=mx.float32),
+        mx.zeros(4, mx.float32),
+    )
+    masked_mps = sampling.apply_top_k_top_p(
+        logits.to("mps"),
+        torch.tensor(top_k, dtype=torch.int32, device="mps"),
+        torch.tensor(top_p, dtype=torch.float32, device="mps"),
+    )
+
+    assert masked_mps.cpu().tolist() == masked_mlx.tolist()
 
 
 def test_broadcast_logits_use_per_row_candidate_ids():

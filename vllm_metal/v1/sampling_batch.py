@@ -334,49 +334,6 @@ class SamplingBatch:
             f"{random_eligible}) — gate desync."
         )
 
-    @staticmethod
-    def _sorted_candidate_logits(
-        scaled_logits: mx.array,
-        top_k: Sequence[int],
-        top_p: Sequence[float],
-        min_p: Sequence[float],
-    ) -> tuple[mx.array, mx.array]:
-        """Per-row top-k/min-p/top-p masking in descending-sorted order.
-
-        ``top_k``/``top_p``/``min_p`` hold one host value per row
-        (``top_k <= 0`` means no top-k), so the graph stays lazy: nothing
-        here evaluates an array. Returns ``(sorted_logits, sorted_token_ids)``:
-        every row's candidate logits in descending order with masked positions
-        at ``-inf``, and the vocab ids at those positions.
-
-        The whole vocabulary is sorted, not just the ``max(top_k)`` largest
-        logits: top-k masks by value, so a row whose k-th largest logit is
-        tied keeps every token sharing that value, and a candidate set cut to
-        ``max(top_k)`` would drop the ones past it.
-        """
-        vocab_size = int(scaled_logits.shape[-1])
-        effective_k = [k if 0 < k < vocab_size else vocab_size for k in top_k]
-        sorted_idx = mx.argsort(scaled_logits, axis=-1)[..., ::-1]
-        sorted_desc = mx.take_along_axis(scaled_logits, sorted_idx, axis=-1)
-
-        if any(k < vocab_size for k in effective_k):
-            # Value threshold (not rank) so boundary ties survive like vLLM's
-            # top-k mask keeps every logit >= the k-th largest.
-            kth_pos = mx.array([k - 1 for k in effective_k], dtype=mx.int32)[:, None]
-            kth_value = mx.take_along_axis(sorted_desc, kth_pos, axis=-1)
-            sorted_desc = mx.where(sorted_desc < kth_value, -mx.inf, sorted_desc)
-        if any(p > 0.0 for p in min_p):
-            min_p_col = mx.array(min_p, dtype=mx.float32)[:, None]
-            sorted_probs = mx.softmax(sorted_desc, axis=-1)
-            keep = sorted_probs >= min_p_col * sorted_probs[..., :1]
-            sorted_desc = mx.where(keep, sorted_desc, -mx.inf)
-        if any(p < 1.0 for p in top_p):
-            top_p_col = mx.array(top_p, dtype=mx.float32)[:, None]
-            sorted_probs = mx.softmax(sorted_desc, axis=-1)
-            leading_mass = mx.cumsum(sorted_probs, axis=-1) - sorted_probs
-            sorted_desc = mx.where(leading_mass < top_p_col, sorted_desc, -mx.inf)
-        return sorted_desc, sorted_idx
-
     @classmethod
     def _native_random_tokens(
         cls,
@@ -428,7 +385,6 @@ class SamplingBatch:
             [0 if k is not None else i for i, k in enumerate(row_keys)], dtype=mx.int64
         )
         values = logits_2d.astype(mx.float32)
-        token_ids = None
         if any(
             0 < k < logits_2d.shape[1] or p != 1.0 or m != 0.0
             for k, p, m in zip(top_k, top_p, min_p, strict=True)
@@ -437,8 +393,11 @@ class SamplingBatch:
             scales = mx.array(
                 [t if t != 0 else 1.0 for t in temperatures], dtype=mx.float32
             )
-            values, token_ids = cls._sorted_candidate_logits(
-                values / scales[:, None], top_k, top_p, min_p
+            values = get_ops().filter_top_k_top_p(
+                values / scales[:, None],
+                mx.array(top_k, dtype=mx.int32),
+                mx.array(top_p, dtype=mx.float32),
+                mx.array(min_p, dtype=mx.float32),
             )
             temperatures = [1.0 if t != 0 else 0.0 for t in temperatures]
         return get_ops().gumbel_sample(
@@ -446,7 +405,6 @@ class SamplingBatch:
             seeds,
             positions,
             mx.array(temperatures, dtype=mx.float32),
-            token_ids,
         )
 
     def _make_temperature(self) -> torch.Tensor | None:

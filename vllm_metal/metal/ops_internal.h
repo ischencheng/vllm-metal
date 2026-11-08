@@ -226,3 +226,5 @@ NaxPrefillTraceResult take_nax_prefill_dispatch_trace();
 array gumbel_sample_primitive_fn(
     const array& logits, const array& seeds, const array& positions,
     const array& temperatures, const std::optional<array>& token_ids);
+array filter_top_k_top_p_primitive_fn(
+    const array& logits, const array& top_k, const array& top_p, const array& min_p);

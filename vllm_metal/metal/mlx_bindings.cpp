@@ -329,6 +329,11 @@ NB_MODULE(_paged_ops, m) {
         nb::arg("temperatures"), nb::arg("token_ids") = nb::none(),
         "Return one int64 token ID per row. Divide logits by each positive temperature. "
         "Pass 1 for pre-scaled logits and 0 for greedy selection.");
+  m.def("filter_top_k_top_p", &filter_top_k_top_p_primitive_fn,
+        nb::arg("logits"), nb::arg("top_k"), nb::arg("top_p"), nb::arg("min_p"),
+        "Return float32 [rows, vocab] logits with filtered tokens at -inf. "
+        "Top-k and min-p keep values, top-p applies over their survivors. Use "
+        "top_k <= 0 or >= vocab, top_p >= 1 and min_p <= 0 to disable a filter.");
   m.def("gdn_state_scatter", &gdn_state_scatter_primitive_fn,
         nb::arg("pool"), nb::arg("src"), nb::arg("dst_ids"), nb::arg("zero") = false,
         nb::arg("paged") = false,
